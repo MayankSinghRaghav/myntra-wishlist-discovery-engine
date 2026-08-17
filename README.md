@@ -71,10 +71,15 @@ Each script has `--selftest` and `-h`.
 
 ## Deploy (Streamlit Community Cloud)
 
-1. Push this repo (public) to GitHub — **including the CSVs** (they're PII-stripped, so the
-   app runs without any key).
-2. Go to <https://share.streamlit.io> → **New app** → pick this repo, branch, `app.py`.
-3. No secrets needed (the app never calls Gemini). Deploy → public URL.
+Repo: <https://github.com/MayankSinghRaghav/myntra-wishlist-discovery-engine>
+
+**One-click deploy:**
+<https://share.streamlit.io/deploy?repository=MayankSinghRaghav/myntra-wishlist-discovery-engine&branch=main&mainModule=app.py>
+
+Or manually:
+1. Go to <https://share.streamlit.io> → sign in with GitHub → **Create app** → **Deploy a public app from GitHub**.
+2. Repository `MayankSinghRaghav/myntra-wishlist-discovery-engine`, branch `main`, main file `app.py`.
+3. **No secrets needed** — the app only reads the committed (PII-stripped) CSVs and never calls Gemini. Deploy → public URL.
 
 `requirements.txt` is intentionally minimal (streamlit/pandas/plotly) to keep the cloud build
 fast; the heavier pipeline deps live in `requirements-pipeline.txt`.
