@@ -1,0 +1,5 @@
+# Deploy deps ONLY — this is what Streamlit Community Cloud installs.
+# The app reads precomputed CSVs and never calls Gemini, so it stays light + keyless.
+streamlit>=1.30
+pandas>=2.0
+plotly>=5.18

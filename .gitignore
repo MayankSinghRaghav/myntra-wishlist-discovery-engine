@@ -1,0 +1,11 @@
+__pycache__/
+*.pyc
+*.log
+.env
+*.key
+gemini.key
+.venv/
+venv/
+.streamlit/secrets.toml
+# NOTE: raw_data.csv / classified_data.csv / opportunities.csv ARE committed
+# (PII-stripped) so the deployed app runs without any API key.
