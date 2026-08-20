@@ -50,9 +50,17 @@ Three FROZEN, competing hypotheses (a claim may support one, contradict one, or 
 - H3 WISHLIST != PURCHASE INTENT: the save was never a deferred purchase (inspiration, comparison,
   bookmark, aspiration, price-watch).
 
+SCOPE — this diagnosis is about the SAVE→BUY decision (why a saved/wishlisted/considered item is or
+is NOT bought). Map a claim to H1/H2/H3 ONLY when it bears on that pre-purchase decision. A complaint
+about a COMPLETED purchase (wrong/old item delivered, return rejected, bad delivery, "Myntra is fraud")
+is post-purchase experience — set its hypothesis to "other", UNLESS the person explicitly ties it to
+now hesitating on SAVED items (a return-safety fear about future buys, which is H1). Do not inflate a
+hypothesis with post-purchase grievances.
+
 Return a JSON array, EXACTLY one object per input text, same order. Each object:
-- is_relevant (bool): true if about a saving/buying/wishlist/fit/quality/return decision on fashion.
-  false for pure app-bug/login/crash/payment/spam/off-topic.
+- is_relevant (bool): true if it concerns a fashion saving/wishlist/consideration/buy-or-not decision
+  OR a fit/size/quality/return-safety judgement that could affect one. false for pure app-bug/login/
+  crash/payment/spam/off-topic and for generic app praise or gripes with no decision content.
 - claims (array): 0-3 ATOMIC claims extracted from THIS text (one behaviour/motivation each).
   [] if irrelevant or nothing about wishlist->purchase. Each claim:
     - claim_text: one atomic statement of the behaviour/motivation (<=160 chars). No solutions.
