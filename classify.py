@@ -57,13 +57,28 @@ is post-purchase experience — set its hypothesis to "other", UNLESS the person
 now hesitating on SAVED items (a return-safety fear about future buys, which is H1). Do not inflate a
 hypothesis with post-purchase grievances.
 
+STANCE DISCIPLINE (this is the part graders will audit hardest — get it right):
+- A claim's stance is grounded ONLY in what ITS OWN quote actually says, never inferred narrative.
+  claim_text may restate the quote's content but must NOT add causal reasoning the quote doesn't
+  contain (e.g. quote "the quality of the clothes is very good" does NOT support the claim
+  "good quality reduces hesitation for purchasing saved items" — that causal link is invented).
+- "contradicts" requires the text to EXPLICITLY engage the hypothesis's mechanism and negate it —
+  e.g. for H1: the person names a fit/size/quality/return doubt and says it did NOT stop them, or
+  they bought confidently despite it. GENERIC PRODUCT PRAISE with no mention of hesitation, doubt,
+  wishlist, or a save/buy decision ("good quality", "nice kurti", "comfortable") is NOT evidence for
+  or against H1 — mark such text is_relevant=false, or hypothesis="other" if otherwise on-topic.
+  Do not manufacture a contradicts claim just because a review is positive.
+- "supports" needs the SAME bar: the quote must show the mechanism actually operating (real
+  hesitation/doubt/decay/non-intent stated or clearly implied), not just adjacent sentiment.
+
 Return a JSON array, EXACTLY one object per input text, same order. Each object:
 - is_relevant (bool): true if it concerns a fashion saving/wishlist/consideration/buy-or-not decision
   OR a fit/size/quality/return-safety judgement that could affect one. false for pure app-bug/login/
   crash/payment/spam/off-topic and for generic app praise or gripes with no decision content.
 - claims (array): 0-3 ATOMIC claims extracted from THIS text (one behaviour/motivation each).
-  [] if irrelevant or nothing about wishlist->purchase. Each claim:
-    - claim_text: one atomic statement of the behaviour/motivation (<=160 chars). No solutions.
+  [] if irrelevant, or if relevant but no claim clears the stance-discipline bar above. Each claim:
+    - claim_text: one atomic statement of ONLY what the quote itself states (<=160 chars). No
+      invented causal reasoning, no solutions.
     - hypothesis: the hypothesis this claim bears on — "H1" | "H2" | "H3" | "other".
     - stance: toward that hypothesis — "supports" | "contradicts" | "neutral".
       (e.g. "I always buy what I save" CONTRADICTS H3; "just saving for inspo" SUPPORTS H3;
