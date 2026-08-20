@@ -1,19 +1,20 @@
 """
-analyze.py — Step 3. Turn dual-hypothesis labels into a per-hypothesis, per-segment
-report that can REJECT a hypothesis — not a single ranked winner.
+analyze.py — Stages 5-7 (Score, Cluster, Emit). Turn atomic claims into a RANKED CLAIM REGISTER
+with per-claim provenance and stance, plus a corpus manifest and a pre-interview early-signal note.
 
-Emits (all deck- and app-ready):
-  data.json        frontend artifact: corpus/source stats, model-mix, the H1/H2/H3 x segment
-                   matrix, "none" share, decisions, audit table, discard pile, retrieval index
-  audit_table.csv  Claim | Sources | Doc count | 3 verbatim quotes | Verdict(blank)
-  audit_table.md   same, screenshot-ready for the deck
-  holdout_sample.csv + holdout_rubric.md   blind hold-out template (hand-coded later)
-  findings.md      honest narrative (the split, decisions, discard pile, limits)
+Diagnosis only. This engine surfaces evidence and STOPS — it never proposes, ranks, or hints at a
+solution/feature (build-spec hard prohibition #1). Contradicting claims are kept, not collapsed.
 
-Thresholds are pre-registered in hypotheses.md and imported here, not tuned to the result.
+Emits:
+  claims_register.json   ranked atomic claims: hypothesis_map, stance, source_quotes[],
+                         n_independent_srcs, inferred_segment, engine_confidence, thin_evidence,
+                         audit_verdict/audit_note (BLANK — filled later from blind interviews)
+  corpus_manifest.json   honest source counts by platform + date range (slide-3 corpus size)
+  early_signal.md        pre-interview, corpus-only lean per hypothesis + segment signal for the screener
+  data.json              dashboard artifact (register + manifest + lean + discard + RAG index)
 
-Run:  python analyze.py -i classified_data.csv
-      python analyze.py --selftest        # offline logic checks
+Run:  python analyze.py -i claims.csv
+      python analyze.py --selftest
 """
 from __future__ import annotations
 
@@ -21,355 +22,310 @@ import argparse
 import csv
 import json
 import sys
+from difflib import SequenceMatcher
 
-import pandas as pd
+from classify import HYPOTHESES  # closed set, single source of truth
 
-from classify import HYPS, INTENT_SEGMENTS, TOPICS  # closed taxonomies — single source of truth
-
-# ---- pre-registered decision rules (see hypotheses.md) ----------------------
-SUPPORT_MIN = 0.15      # >= => supported overall (with >=2 sources)
-REJECT_MAX = 0.08       # <  => rejected IF it also leads no segment
-MIN_SOURCES = 2         # cross-source rule: a reported claim needs >=2 distinct sources
-MIN_CLAIM_DOCS = 5      # a claim row needs at least this many documents
-HEADLINE_TIE = 0.05     # overall shares within this band + no segment split => "no dominant mechanism"
-
+SIM = 0.60          # difflib similarity to merge two atomic claims into one register entry
+MAX_QUOTES = 5      # source_quotes per register entry
+HYP_LABEL = {"h1": "H1", "h2": "H2", "h3": "H3", "other": "other"}
 HYP_NAME = {
-    "h1": "H1 — uncertainty blocks conversion",
-    "h2": "H2 — relevance decays",
-    "h3": "H3 — wishlist ≠ purchase intent",
+    "h1": "H1 — purchase-time uncertainty stalls still-wanted items",
+    "h2": "H2 — relevance decays inside the 30-day window",
+    "h3": "H3 — wishlist add ≠ purchase intent",
+    "other": "other / unmapped",
 }
-BOOL_COLS = ["is_relevant", "is_myntra_specific"] + [f"{h}_present" for h in HYPS]
 
 
 # ---------------------------------------------------------------- io
-def load(path: str) -> pd.DataFrame:
-    df = pd.read_csv(path, dtype=str).fillna("")
-    for c in BOOL_COLS:
-        df[c] = df[c].str.lower().isin({"true", "1", "yes"})
-    for h in HYPS:
-        df[f"{h}_conf"] = pd.to_numeric(df[f"{h}_conf"], errors="coerce").fillna(0.0)
-    if "method" not in df:
-        df["method"] = "gemini"
-    return df
+def load(path: str) -> list[dict]:
+    with open(path, encoding="utf-8") as f:
+        return list(csv.DictReader(f))
 
 
-def _quotes(sub: pd.DataFrame, h: str, k: int = 3) -> list[dict]:
-    """Up to k distinct verified spans for hypothesis h, preferring distinct sources."""
-    out, seen_txt, seen_src = [], set(), set()
-    pool = sub[sub[f"{h}_span"].str.len() > 0]
-    for prefer_new_src in (True, False):        # first pass: spread across sources
-        for _, r in pool.iterrows():
-            q = r[f"{h}_span"].strip()
-            if q in seen_txt:
+def _norm(s: str) -> str:
+    return " ".join((s or "").lower().split())
+
+
+# ---------------------------------------------------------------- clustering
+# Closed domain theme taxonomy — a claim is bucketed by its first matching theme (order matters).
+# Keyword themes cluster robustly across paraphrase where char-similarity fails; keyword-less
+# claims fall back to difflib. Themes never cross (hypothesis, stance) boundaries.
+import re as _re  # noqa: E402
+
+THEME_KEYWORDS = [
+    ("fit_size", _re.compile(r"\b(fit|fitting|size|sizing|true to size|size chart|too (small|big|tight|loose)|runs (small|big))\b", _re.I)),
+    ("quality", _re.compile(r"\b(quality|material|fabric|cheap|flimsy|thin|wash|shrink|shrunk|pilling|stitch)\b", _re.I)),
+    ("authenticity", _re.compile(r"\b(original|authentic|genuine|fake|first copy|duplicate)\b", _re.I)),
+    ("returns_delivery", _re.compile(r"\b(return|refund|exchange|replace|delivery|damaged|wrong (product|item)|defect)\b", _re.I)),
+    ("price_watch", _re.compile(r"\b(sale|offer|discount|price|cheaper|coupon|deal|wait(ing)? for)\b", _re.I)),
+    ("inspiration", _re.compile(r"\b(inspo|inspiration|aspir|mood ?board|dream|someday|wishlist goals)\b", _re.I)),
+    ("comparison", _re.compile(r"\b(compar|shortlist|options|versus|\bvs\b|decide between)\b", _re.I)),
+    ("bookmark", _re.compile(r"\b(save (for )?later|see later|bookmark|remember|for later|note down)\b", _re.I)),
+    ("forgot", _re.compile(r"\b(forgot|forget|slipped my mind|lost track)\b", _re.I)),
+    ("occasion", _re.compile(r"\b(occasion|wedding|festival|diwali|party|trip|event|birthday|function)\b", _re.I)),
+    ("season_trend", _re.compile(r"\b(season|summer|winter|monsoon|trend|dated|out of style)\b", _re.I)),
+]
+
+
+def theme_of(row: dict) -> str:
+    hay = f"{row['claim_text']} {row['quote']}"
+    for name, rx in THEME_KEYWORDS:
+        if rx.search(hay):
+            return name
+    return "misc"
+
+
+def cluster(items: list[dict], threshold: float = SIM) -> list[list[dict]]:
+    """difflib fallback for keyword-less ('misc') claims within one (hypothesis, stance) group."""
+    clusters: list[list[dict]] = []
+    seeds: list[str] = []
+    for it in items:
+        t = _norm(it["claim_text"])
+        placed = False
+        for i, seed in enumerate(seeds):
+            if SequenceMatcher(None, t, seed).ratio() >= threshold:
+                clusters[i].append(it)
+                placed = True
+                break
+        if not placed:
+            clusters.append([it])
+            seeds.append(t)
+    return clusters
+
+
+def _representative(members: list[dict]) -> str:
+    """Medoid claim_text — the member most similar to the rest (most representative wording)."""
+    if len(members) == 1:
+        return members[0]["claim_text"]
+    texts = [m["claim_text"] for m in members]
+    norms = [_norm(t) for t in texts]
+    best, best_score = texts[0], -1.0
+    for i, ni in enumerate(norms):
+        score = sum(SequenceMatcher(None, ni, nj).ratio() for j, nj in enumerate(norms) if i != j)
+        if score > best_score:
+            best, best_score = texts[i], score
+    return best
+
+
+def _quotes(members: list[dict]) -> list[dict]:
+    out, seen = [], set()
+    for pref_new_platform in (True, False):
+        plats = {q["platform"] for q in out}
+        for m in members:
+            q = m["quote"].strip()
+            if not q or q in seen:
                 continue
-            if prefer_new_src and r["source"] in seen_src:
+            if pref_new_platform and m["source"] in plats:
                 continue
-            out.append({"quote": q, "source": r["source"], "url": r["url"], "doc_id": r["doc_id"]})
-            seen_txt.add(q)
-            seen_src.add(r["source"])
-            if len(out) >= k:
+            out.append({"verbatim": q, "url": m["url"], "platform": m["source"],
+                        "date": m["posted_date"]})
+            seen.add(q)
+            if len(out) >= MAX_QUOTES:
                 return out
     return out
 
 
-def _decide(overall: float, leads_any_segment: bool) -> str:
-    if overall >= SUPPORT_MIN:
-        return "supported"
-    if overall < REJECT_MAX and not leads_any_segment:
-        return "rejected"
-    return "partial"
+def _confidence(n_srcs: int, freq: int) -> tuple[str, str]:
+    basis = f"{freq} passage(s) across {n_srcs} independent platform(s)"
+    if n_srcs >= 2 and freq >= 5:
+        return "high", basis
+    if n_srcs >= 2 or freq >= 3:
+        return "med", basis
+    return "low", basis
 
 
-# ---------------------------------------------------------------- core
-def analyze(df: pd.DataFrame) -> dict:
-    rel = df[df["is_relevant"]].copy()
-    n_rel = len(rel)
-    segs = sorted(INTENT_SEGMENTS)
+def _segment(members: list[dict]) -> dict | None:
+    cats = [m["category"] for m in members if m["category"] and m["category"] != "other"]
+    if not cats:
+        return None
+    top = max(set(cats), key=cats.count)
+    return {"category": top}  # age_band / geo not reliably inferable from public text -> omitted
 
-    seg_totals = {s: int((rel["intent_segment"] == s).sum()) for s in segs}
 
-    # which hypothesis leads each segment (by within-segment evidence share)
-    seg_leader: dict[str, str] = {}
-    for s in segs:
-        sub = rel[rel["intent_segment"] == s]
-        if len(sub):
-            shares = {h: float(sub[f"{h}_present"].mean()) for h in HYPS}
-            top = max(shares, key=shares.get)
-            seg_leader[s] = top if shares[top] > 0 else ""
-        else:
-            seg_leader[s] = ""
+# ---------------------------------------------------------------- build register
+def build_register(claim_rows: list[dict]) -> list[dict]:
+    # cluster key = (hypothesis, stance, theme); a theme group is one claim, except "misc"
+    # which is sub-clustered by difflib so keyword-less paraphrases still merge.
+    by_group: dict[tuple, list[dict]] = {}
+    for r in claim_rows:
+        by_group.setdefault((r["hypothesis"], r["stance"], theme_of(r)), []).append(r)
 
-    hyps: dict[str, dict] = {}
-    for h in HYPS:
-        ev = rel[rel[f"{h}_present"]]
-        overall = float(len(ev) / n_rel) if n_rel else 0.0
-        by_seg = {}
-        for s in segs:
-            seg_sub = rel[rel["intent_segment"] == s]
-            seg_ev = seg_sub[seg_sub[f"{h}_present"]]
-            by_seg[s] = {
-                "docs": int(len(seg_ev)),
-                "share": round(float(len(seg_ev) / len(seg_sub)), 4) if len(seg_sub) else 0.0,
-                "sources": sorted(seg_ev["source"].unique().tolist()),
-                "leads": seg_leader.get(s) == h,
-            }
-        leads_any = any(v["leads"] and v["docs"] >= MIN_CLAIM_DOCS for v in by_seg.values())
-        srcs = sorted(ev["source"].unique().tolist())
-        hyps[h] = {
-            "name": HYP_NAME[h],
-            "docs": int(len(ev)),
-            "overall_share": round(overall, 4),
-            "sources": srcs,
-            "n_sources": len(srcs),
-            "mean_conf": round(float(ev[f"{h}_conf"].mean()), 3) if len(ev) else 0.0,
-            "by_segment": by_seg,
-            "decision": _decide(overall, leads_any),
-            "cross_source_ok": len(srcs) >= MIN_SOURCES,
-            "quotes": _quotes(ev, h),
-        }
+    entries = []
+    for (hyp, stance, theme), rows in by_group.items():
+        groups = cluster(rows) if theme == "misc" else [rows]
+        for members in groups:
+            srcs = sorted({m["source"] for m in members})
+            freq = len(members)
+            conf, basis = _confidence(len(srcs), freq)
+            entries.append({
+                "claim_text": _representative(members),
+                "hypothesis_map": HYP_LABEL.get(hyp, "other"),
+                "stance": stance,
+                "theme": theme,
+                "source_quotes": _quotes(members),
+                "n_independent_srcs": len(srcs),
+                "inferred_segment": _segment(members),
+                "engine_confidence": conf,
+                "confidence_basis": basis,
+                "thin_evidence": len(srcs) < 2,
+                "corpus_frequency": freq,
+                "audit_verdict": "",   # filled later from blind interviews
+                "audit_note": "",
+            })
 
-    none_mask = ~(rel["h1_present"] | rel["h2_present"] | rel["h3_present"])
-    none_share = float(none_mask.mean()) if n_rel else 0.0
+    rank = {"high": 0, "med": 1, "low": 2}
+    entries.sort(key=lambda e: (rank[e["engine_confidence"]], -e["corpus_frequency"],
+                                -e["n_independent_srcs"]))
+    for i, e in enumerate(entries, 1):
+        e["claim_id"] = f"C{i:03d}"
+    return [{"claim_id": e.pop("claim_id"), **e} for e in entries]
 
-    price_mask = (rel["intent_segment"] == "price_watch") | (rel["topic"] == "price_value")
-    price_share = float(price_mask.mean()) if n_rel else 0.0
 
-    method_mix = df["method"].value_counts().to_dict()
-    ai_share = float((df["method"] == "gemini").mean()) if len(df) else 0.0
-
-    # headline: is there a dominant mechanism, or a genuine split?
-    shares = {h: hyps[h]["overall_share"] for h in HYPS}
-    spread = max(shares.values()) - min(shares.values()) if shares else 0.0
-    split = {s: seg_leader[s] for s in segs if seg_leader[s] and seg_totals[s] >= MIN_CLAIM_DOCS}
-    distinct_leaders = len(set(split.values()))
-    if spread < HEADLINE_TIE and distinct_leaders <= 1:
-        headline = "No dominant mechanism — H1/H2/H3 shares are within the pre-registered tie band."
-    else:
-        parts = [f"{seg_leader[s].upper()} leads {s}" for s in split]
-        headline = "Split result — " + "; ".join(parts) if parts else "See per-segment matrix."
-
+# ---------------------------------------------------------------- manifest / lean / discard
+def corpus_manifest(rows: list[dict]) -> dict:
+    docs = {r["doc_id"]: r for r in rows}                      # last row per doc; is_relevant stable
+    by_platform: dict[str, int] = {}
+    for d in docs.values():
+        by_platform[d["source"]] = by_platform.get(d["source"], 0) + 1
+    dates = sorted(d["posted_date"] for d in docs.values() if d["posted_date"])
+    n_rel = sum(1 for d in docs.values() if str(d["is_relevant"]).lower() in {"true", "1"})
     return {
-        "corpus": {
-            "n_total": int(len(df)),
-            "n_relevant": n_rel,
-            "n_myntra_specific": int(rel["is_myntra_specific"].sum()),
-            "sources": {s: int(c) for s, c in df["source"].value_counts().items()},
-            "n_sources": int(df["source"].nunique()),
-        },
-        "model_mix": {"counts": method_mix, "ai_share": round(ai_share, 4)},
-        "segments": {s: seg_totals[s] for s in segs},
-        "hypotheses": hyps,
-        "none_share": round(none_share, 4),
-        "none_docs": int(none_mask.sum()),
-        "price_sanity": {"price_share": round(price_share, 4),
-                         "non_price_share": round(1 - price_share, 4)},
-        "headline": headline,
-        "seg_leader": seg_leader,
+        "n_documents": len(docs),
+        "n_relevant": n_rel,
+        "platforms": sorted(by_platform),
+        "n_independent_platforms": len(by_platform),
+        "counts_by_platform": by_platform,
+        "date_range": {"earliest": dates[0] if dates else None,
+                       "latest": dates[-1] if dates else None},
+        "not_ingested": ["apple_app_store", "x_twitter", "quora"],  # honest: wired-or-planned, thin
     }
 
 
-# ---------------------------------------------------------------- audit table
-def build_audit_table(rep: dict, rel: pd.DataFrame) -> list[dict]:
-    """One row per reportable claim: overall (supported/partial) + segment-leading cells.
-    Verdict is left blank — Cowork fills Held up / Partly invented / Rejected post-interviews."""
-    rows: list[dict] = []
-
-    def _row(claim, sub, h, sources, docs):
-        qs = _quotes(sub, h, 3)
-        rows.append({
-            "claim": claim,
-            "sources": ", ".join(sources),
-            "doc_count": int(docs),
-            "quote_1": qs[0]["quote"] if len(qs) > 0 else "",
-            "quote_2": qs[1]["quote"] if len(qs) > 1 else "",
-            "quote_3": qs[2]["quote"] if len(qs) > 2 else "",
-            "cross_source_ok": len(sources) >= MIN_SOURCES,
-            "verdict": "",   # filled after primary research
-        })
-
-    for h in HYPS:
-        H = rep["hypotheses"][h]
-        if H["decision"] in ("supported", "partial") and H["docs"] >= MIN_CLAIM_DOCS \
-                and H["cross_source_ok"]:
-            ev = rel[rel[f"{h}_present"]]
-            _row(f"{H['name']} (overall, {H['overall_share']*100:.0f}% of relevant, {H['decision']})",
-                 ev, h, H["sources"], H["docs"])
-        for s, cell in H["by_segment"].items():
-            if cell["leads"] and cell["docs"] >= MIN_CLAIM_DOCS and len(cell["sources"]) >= MIN_SOURCES:
-                sub = rel[(rel["intent_segment"] == s) & (rel[f"{h}_present"])]
-                _row(f"{HYP_NAME[h]} LEADS the '{s}' segment ({cell['share']*100:.0f}% of it)",
-                     sub, h, cell["sources"], cell["docs"])
-    return rows
+def hypothesis_lean(claim_rows: list[dict]) -> dict:
+    lean = {h: {"supports": 0, "contradicts": 0, "neutral": 0} for h in HYPOTHESES}
+    for r in claim_rows:
+        if r["hypothesis"] in lean and r["stance"] in lean[r["hypothesis"]]:
+            lean[r["hypothesis"]][r["stance"]] += 1
+    for h, d in lean.items():
+        d["net"] = d["supports"] - d["contradicts"]
+        d["total"] = d["supports"] + d["contradicts"] + d["neutral"]
+    return lean
 
 
-def discard_pile(df: pd.DataFrame, rep: dict, rel: pd.DataFrame) -> dict:
-    none_docs = rel[~(rel["h1_present"] | rel["h2_present"] | rel["h3_present"])]
-    # single-source / sub-min hypothesis-segment cells that were NOT promoted to a claim
-    weak = []
-    for h in HYPS:
-        for s, cell in rep["hypotheses"][h]["by_segment"].items():
-            if 0 < cell["docs"] < MIN_CLAIM_DOCS or (cell["docs"] and len(cell["sources"]) < MIN_SOURCES):
-                weak.append({"hypothesis": h, "segment": s, "docs": cell["docs"],
-                             "sources": cell["sources"], "why": "sub-min-docs or single-source"})
+def category_signal(claim_rows: list[dict]) -> dict:
+    cats: dict[str, int] = {}
+    for r in claim_rows:
+        c = r["category"]
+        if c and c != "other":
+            cats[c] = cats.get(c, 0) + 1
+    return dict(sorted(cats.items(), key=lambda kv: -kv[1]))
+
+
+def discard_pile(rows: list[dict], claim_rows: list[dict], register: list[dict]) -> dict:
+    docs = {r["doc_id"]: r for r in rows}
+    not_rel = [d for d in docs.values() if str(d["is_relevant"]).lower() not in {"true", "1"}]
+    unverified = [r for r in claim_rows if not r["quote"].strip()]  # claim w/o traceable quote (#4)
+    thin = [e for e in register if e["thin_evidence"]]
     return {
-        "not_relevant": {"count": int((~df["is_relevant"]).sum())},
-        "none_hypothesis": {"count": int(len(none_docs)),
-                            "samples": none_docs["raw_text"].str[:160].head(8).tolist()},
-        "weak_cells": weak,
+        "not_relevant": {"count": len(not_rel)},
+        "unverified_claims": {"count": len(unverified),
+                              "samples": [r["claim_text"] for r in unverified[:8]]},
+        "thin_single_source_claims": {"count": len(thin)},
     }
 
 
-def build_index(rel: pd.DataFrame, cap: int = 4000) -> list[dict]:
-    """Client-side RAG index: relevant docs with a display quote + search text."""
+def build_index(claim_rows: list[dict], cap: int = 4000) -> list[dict]:
     out = []
-    for _, r in rel.head(cap).iterrows():
-        quote = next((r[f"{h}_span"] for h in HYPS if r[f"{h}_span"].strip()), "")
-        out.append({
-            "doc_id": r["doc_id"], "source": r["source"], "url": r["url"],
-            "segment": r["intent_segment"],
-            "hyps": [h for h in HYPS if r[f"{h}_present"]],
-            "quote": (quote or r["raw_text"][:160]).strip(),
-            "text": r["raw_text"][:240],
-        })
+    for r in claim_rows[:cap]:
+        if not r["quote"].strip():
+            continue
+        out.append({"claim": r["claim_text"], "quote": r["quote"], "platform": r["source"],
+                    "url": r["url"], "hypothesis": HYP_LABEL.get(r["hypothesis"], "other"),
+                    "stance": r["stance"], "text": (r["claim_text"] + " " + r["quote"])[:240]})
     return out
 
 
-# ---------------------------------------------------------------- writers
-def write_audit(rows: list[dict], csv_path: str, md_path: str) -> None:
-    cols = ["claim", "sources", "doc_count", "quote_1", "quote_2", "quote_3",
-            "cross_source_ok", "verdict"]
-    with open(csv_path, "w", newline="", encoding="utf-8") as f:
-        w = csv.DictWriter(f, fieldnames=cols)
-        w.writeheader()
-        w.writerows(rows)
-    L = ["# Audit table — AI-surfaced claims for primary-research verification\n",
-         "_Verdict is filled AFTER interviews/survey: Held up / Partly invented / Rejected._\n\n",
-         "| Claim | Sources | Docs | Sample verbatim quotes | Verdict |\n",
-         "|---|---|---|---|---|\n"]
-    for r in rows:
-        qs = " <br> ".join(f"“{r[q]}”" for q in ("quote_1", "quote_2", "quote_3") if r[q])
-        L.append(f"| {r['claim']} | {r['sources']} | {r['doc_count']} | {qs} | {r['verdict'] or '_(pending)_'} |\n")
-    open(md_path, "w", encoding="utf-8").write("".join(L))
-
-
-def write_holdout(rel: pd.DataFrame, n: int = 60) -> None:
-    """Deterministic blind sample (every Nth relevant row) with blank hypothesis columns."""
-    step = max(1, len(rel) // n)
-    sample = rel.iloc[::step].head(n)
-    cols = ["doc_id", "source", "raw_text"]
-    with open("holdout_sample.csv", "w", newline="", encoding="utf-8") as f:
-        w = csv.writer(f)
-        w.writerow(cols + ["h1_present", "h2_present", "h3_present", "intent_segment"])
-        for _, r in sample.iterrows():
-            w.writerow([r["doc_id"], r["source"], r["raw_text"], "", "", "", ""])
-    open("holdout_rubric.md", "w", encoding="utf-8").write(
-        "# Blind hold-out coding rubric\n\n"
-        f"Hand-code the {len(sample)} rows in `holdout_sample.csv` against the SAME rules as "
-        "hypotheses.md, WITHOUT looking at the model's labels. Fill h1/h2/h3_present (true/false) "
-        "and intent_segment, then compare to the model to report one plain agreement number.\n\n"
-        "- **H1** unresolved doubt (fit/size/quality/authenticity/styling/social) on a wanted item.\n"
-        "- **H2** relevance lapsed (occasion passed, forgot, bought elsewhere).\n"
-        "- **H3** the save was never a buy signal (mood-board/price-watch/browse/size-hold).\n"
-        "- A row may be true on several, one, or none.\n"
-        f"- intent_segment ∈ {sorted(INTENT_SEGMENTS)}\n")
-
-
-def write_findings(rep: dict, audit: list[dict], discard: dict, path: str = "findings.md") -> None:
-    c = rep["corpus"]
-    L = ["# Findings — Myntra Wishlist→Purchase Discovery Engine (Attempt 3)\n\n",
-         "_Pre-registered hypotheses (see `hypotheses.md`), coded independently per document. "
-         "This is a hypothesis generator over complaint-skewed public text, NOT proof. "
-         "Every claim is for primary research to confirm or kill (see `audit_table.md`)._\n\n",
-         f"## Headline\n**{rep['headline']}**\n\n",
-         "> Note: this engine does not emit a single ranked “opportunity score.” The unit of "
-         "output is per-hypothesis evidence share, reported per intent-segment.\n\n",
-         "## Corpus & model mix\n",
-         f"- {c['n_total']} texts; **{c['n_relevant']} relevant**; {c['n_sources']} sources: {c['sources']}\n",
-         f"- Model mix: {rep['model_mix']['counts']} — **{rep['model_mix']['ai_share']*100:.1f}% AI**, "
-         "remainder rule-based fallback (logged, never counted as AI).\n",
-         f"- Price sanity (not the headline): {rep['price_sanity']['price_share']*100:.0f}% price / "
-         f"{rep['price_sanity']['non_price_share']*100:.0f}% non-price.\n\n",
-         "## Hypotheses (overall)\n",
-         "| Hypothesis | Docs | Share | Sources | ≥2 sources | Decision |\n|---|---|---|---|---|---|\n"]
-    for h in HYPS:
-        H = rep["hypotheses"][h]
-        L.append(f"| {H['name']} | {H['docs']} | {H['overall_share']*100:.1f}% | {H['n_sources']} | "
-                 f"{'yes' if H['cross_source_ok'] else 'NO'} | **{H['decision']}** |\n")
-    L.append(f"\n- **“None” (no hypothesis) share: {rep['none_share']*100:.1f}%** "
-             f"({rep['none_docs']} docs) — tracked, not hidden.\n\n")
-
-    L.append("## Per-segment split (H-share within each intent segment)\n")
-    L.append("| Segment | n | H1 | H2 | H3 | leads |\n|---|---|---|---|---|---|\n")
-    for s, tot in rep["segments"].items():
-        cells = {h: rep["hypotheses"][h]["by_segment"][s]["share"] for h in HYPS}
-        lead = rep["seg_leader"].get(s, "") or "—"
-        L.append(f"| {s} | {tot} | {cells['h1']*100:.0f}% | {cells['h2']*100:.0f}% | "
-                 f"{cells['h3']*100:.0f}% | {lead} |\n")
-
-    L.append("\n## Audit table (for primary research)\n")
-    L.append(f"{len(audit)} claims exported to `audit_table.md` — Verdict pending interviews.\n\n")
-    L.append("## Discard pile (shown for honesty)\n")
-    L.append(f"- Not relevant: {discard['not_relevant']['count']} rows.\n")
-    L.append(f"- Supported no hypothesis (“none”): {discard['none_hypothesis']['count']} rows.\n")
-    L.append(f"- Weak/single-source hypothesis-segment cells not promoted to claims: "
-             f"{len(discard['weak_cells'])}.\n\n")
-    L.append("## Limitations\n"
-             "- Complaint-skewed: reviews over-represent the frustrated; shares are complaint-share, "
-             "not user prevalence.\n- English-biased collection (`lang=en`).\n"
-             "- App/forum text is a PROXY for the wishlist funnel — every link is a hypothesis.\n"
-             "- Blind hold-out agreement is reported once in the deck after hand-coding "
-             "`holdout_sample.csv`.\n")
+# ---------------------------------------------------------------- early_signal.md
+def write_early_signal(lean: dict, cats: dict, manifest: dict, register: list[dict],
+                       path: str = "early_signal.md") -> None:
+    L = ["# Early signal — corpus-only, PRE-INTERVIEW (not conclusions)\n\n",
+         "_Generated from public-evidence claims BEFORE any interview was coded. This is a lean and a\n"
+         "screener input, NOT a verdict. Every claim here is audited per-claim against blind interviews\n"
+         "(deck slide 4). No solution is proposed — the engine surfaces evidence and stops._\n\n",
+         f"Corpus: **{manifest['n_documents']} documents**, {manifest['n_relevant']} relevant, across "
+         f"**{manifest['n_independent_platforms']} independent platforms** {manifest['platforms']}. "
+         f"{len(register)} distinct claims in the register.\n\n",
+         "## Hypothesis lean (supports vs contradicts, claim counts)\n",
+         "| Hypothesis | supports | contradicts | neutral | net |\n|---|---|---|---|---|\n"]
+    for h in ("h1", "h2", "h3", "other"):
+        d = lean[h]
+        L.append(f"| {HYP_NAME[h]} | {d['supports']} | {d['contradicts']} | {d['neutral']} | "
+                 f"{d['net']:+d} |\n")
+    L.append("\n_Net = supports − contradicts. A large **contradicts** count is the engine helping to "
+             "KILL a hypothesis — that is a finding, not noise. Counts are complaint-skewed public "
+             "text, not user prevalence._\n\n")
+    L.append("## Segment signal for the interview screener (product-category concentration)\n")
+    if cats:
+        for c, n in list(cats.items())[:8]:
+            L.append(f"- **{c}**: {n} claims\n")
+        top = next(iter(cats))
+        L.append(f"\n**Screener recommendation (pre-interview):** over-sample recent wishlist users in "
+                 f"the **{top}** category, where the corpus signal concentrates. Age/geo are not "
+                 f"reliably inferable from public text — recruit those open.\n")
+    else:
+        L.append("- No reliable category concentration in the corpus yet — recruit category-open.\n")
+    L.append("\n_Caveat: pre-interview, corpus-only. Do not treat lean as proof; the audit table "
+             "(slide 4) sets each claim's verdict from primary research._\n")
     open(path, "w", encoding="utf-8").write("".join(L))
 
 
 # ---------------------------------------------------------------- selftest
-def _fake_rel() -> pd.DataFrame:
-    rows = []
-    def add(doc, src, seg, h1, h2, h3, s1="", s2="", s3=""):
-        rows.append({"doc_id": doc, "source": src, "url": "u", "raw_text": f"{s1} {s2} {s3} text",
-                     "is_relevant": True, "is_myntra_specific": True, "intent_segment": seg,
-                     "h1_present": h1, "h1_conf": 0.8 if h1 else 0.0, "h1_span": s1,
-                     "h2_present": h2, "h2_conf": 0.8 if h2 else 0.0, "h2_span": s2,
-                     "h3_present": h3, "h3_conf": 0.8 if h3 else 0.0, "h3_span": s3,
-                     "topic": "fit_uncertainty", "evidence_strength": "explicit", "method": "gemini"})
-    # deferred_purchase: H1-heavy across 2 sources; mood_board: H3-heavy across 2 sources
-    for i in range(6):
-        add(f"d{i}", "google_play" if i % 2 else "reddit", "deferred_purchase", True, False, False, s1="not sure of size")
-    for i in range(6):
-        add(f"m{i}", "youtube" if i % 2 else "reddit", "mood_board", False, False, True, s3="just for inspo")
-    add("none1", "reddit", "unclear", False, False, False)   # a real "none"
-    return pd.DataFrame(rows)
+def _fake() -> list[dict]:
+    def row(doc, src, ct, hyp, stance, quote, cat="", rel="True"):
+        plat = {"reddit": "reddit_post", "youtube": "youtube_comment", "google_play": "android_app_review"}[src]
+        return {"claim_id": f"{doc}#0", "doc_id": doc, "source": src, "platform": plat,
+                "url": f"http://{doc}", "posted_date": "2026-03-01", "is_relevant": rel,
+                "claim_text": ct, "hypothesis": hyp, "stance": stance, "quote": quote,
+                "category": cat, "method": "gemini"}
+    return [
+        row("d1", "reddit", "saved it but still unsure of the size", "h1", "supports", "unsure of the size", "ethnic"),
+        row("d2", "google_play", "not sure about size so did not buy", "h1", "supports", "not sure about size", "ethnic"),
+        row("d3", "youtube", "i always end up buying what i wishlist", "h3", "contradicts", "always buying what i wishlist"),
+        row("d4", "reddit", "just saving these for inspiration", "h3", "supports", "saving these for inspiration"),
+        row("d5", "reddit", "claim with no quote", "h2", "supports", ""),   # unverified -> discard
+        {"claim_id": "d6#0", "doc_id": "d6", "source": "reddit", "platform": "reddit_post",
+         "url": "u", "posted_date": "", "is_relevant": "False", "claim_text": "", "hypothesis": "",
+         "stance": "", "quote": "", "category": "", "method": "gemini"},   # not-relevant marker
+    ]
 
 
 def _selftest() -> None:
-    assert _decide(0.2, False) == "supported"
-    assert _decide(0.05, False) == "rejected"
-    assert _decide(0.05, True) == "partial"      # leads a segment => not rejected
-    assert _decide(0.10, False) == "partial"
-    rel = _fake_rel()
-    df = rel.copy()
-    df.loc[len(df)] = {**{c: "" for c in df.columns}, "doc_id": "irr", "source": "reddit",
-                       "raw_text": "app crashed", "is_relevant": False, "is_myntra_specific": False,
-                       "intent_segment": "unclear", "h1_present": False, "h2_present": False,
-                       "h3_present": False, "h1_conf": 0.0, "h2_conf": 0.0, "h3_conf": 0.0,
-                       "topic": "other", "evidence_strength": "weak_inference", "method": "gemini"}
-    rep = analyze(df)
-    assert rep["seg_leader"]["deferred_purchase"] == "h1", rep["seg_leader"]
-    assert rep["seg_leader"]["mood_board"] == "h3", rep["seg_leader"]
-    assert rep["none_docs"] == 1 and rep["none_share"] > 0     # "none" tracked
-    assert "Split" in rep["headline"]                          # split, not a single winner
-    audit = build_audit_table(rep, df[df["is_relevant"]])
-    assert audit and all(r["cross_source_ok"] for r in audit)  # every claim clears >=2 sources
-    assert all(r["verdict"] == "" for r in audit)              # verdict pending
-    d = discard_pile(df, rep, df[df["is_relevant"]])
-    assert d["not_relevant"]["count"] == 1 and d["none_hypothesis"]["count"] == 1
+    rows = _fake()
+    claim_rows = [r for r in rows if r["claim_text"]]
+    shippable = [r for r in claim_rows if r["quote"].strip()]
+    reg = build_register(shippable)
+    # the two "unsure of size" H1/supports claims merge into ONE entry across 2 platforms
+    h1 = [e for e in reg if e["hypothesis_map"] == "H1"]
+    assert len(h1) == 1 and h1[0]["n_independent_srcs"] == 2 and not h1[0]["thin_evidence"], h1
+    # supports and contradicts on H3 stay SEPARATE entries (never collapsed)
+    h3 = sorted([e for e in reg if e["hypothesis_map"] == "H3"], key=lambda e: e["stance"])
+    assert [e["stance"] for e in h3] == ["contradicts", "supports"], h3
+    assert all(e["audit_verdict"] == "" for e in reg)          # verdict blank
+    assert all(e["source_quotes"] for e in reg)                # every shipped claim traceable
+    lean = hypothesis_lean(claim_rows)
+    assert lean["h3"]["contradicts"] == 1 and lean["h3"]["supports"] == 1
+    man = corpus_manifest(rows)   # d1-d5 relevant (d5 relevant but its claim is unverified), d6 not
+    assert man["n_documents"] == 6 and man["n_relevant"] == 5 and man["n_independent_platforms"] == 3
+    disc = discard_pile(rows, claim_rows, reg)
+    assert disc["unverified_claims"]["count"] == 1 and disc["not_relevant"]["count"] == 1
     print("selftest OK")
 
 
 # ---------------------------------------------------------------- main
 def main() -> None:
-    ap = argparse.ArgumentParser(description="Dual-hypothesis analysis -> data.json + audit table")
-    ap.add_argument("-i", "--input", default="classified_data.csv")
+    ap = argparse.ArgumentParser(description="Claims -> ranked register + manifest + early signal")
+    ap.add_argument("-i", "--input", default="claims.csv")
     ap.add_argument("--data", default="data.json")
     ap.add_argument("--selftest", action="store_true")
     args = ap.parse_args()
@@ -378,27 +334,36 @@ def main() -> None:
         _selftest()
         return
 
-    df = load(args.input)
-    rel = df[df["is_relevant"]].copy()
-    print(f"Loaded {len(df)} rows; {len(rel)} relevant.", file=sys.stderr)
+    rows = load(args.input)
+    claim_rows = [r for r in rows if r["claim_text"]]
+    shippable = [r for r in claim_rows if r["quote"].strip()]
+    print(f"{len(rows)} rows; {len(claim_rows)} claims; {len(shippable)} traceable.", file=sys.stderr)
 
-    rep = analyze(df)
-    audit = build_audit_table(rep, rel)
-    discard = discard_pile(df, rep, rel)
-    rep["audit_table"] = audit
-    rep["discard_pile"] = discard
-    rep["index"] = build_index(rel)
+    register = build_register(shippable)
+    manifest = corpus_manifest(rows)
+    lean = hypothesis_lean(claim_rows)
+    cats = category_signal(claim_rows)
+    discard = discard_pile(rows, claim_rows, register)
 
-    import os
-    os.makedirs(os.path.dirname(args.data) or ".", exist_ok=True)
-    with open(args.data, "w", encoding="utf-8") as f:
-        json.dump(rep, f, ensure_ascii=False)
-    write_audit(audit, "audit_table.csv", "audit_table.md")
-    write_holdout(rel)
-    write_findings(rep, audit, discard)
-    print(f"Wrote {args.data} ({len(rep['index'])} indexed), audit_table.* ({len(audit)} claims), "
-          f"holdout_sample.csv, findings.md")
-    print(f"HEADLINE: {rep['headline']}")
+    manifest["n_claims_extracted"] = len(claim_rows)
+    manifest["n_claims_traceable"] = len(shippable)
+    manifest["n_register_entries"] = len(register)
+    method_docs: dict[str, int] = {}
+    for r in {r["doc_id"]: r for r in rows}.values():
+        method_docs[r["method"]] = method_docs.get(r["method"], 0) + 1
+    manifest["model_mix"] = method_docs
+
+    json.dump(register, open("claims_register.json", "w", encoding="utf-8"), ensure_ascii=False, indent=1)
+    json.dump(manifest, open("corpus_manifest.json", "w", encoding="utf-8"), ensure_ascii=False, indent=1)
+    write_early_signal(lean, cats, manifest, register)
+    json.dump({"manifest": manifest, "register": register, "lean": lean, "categories": cats,
+               "discard_pile": discard, "index": build_index(shippable)},
+              open(args.data, "w", encoding="utf-8"), ensure_ascii=False)
+    print(f"Wrote claims_register.json ({len(register)} claims), corpus_manifest.json, "
+          f"early_signal.md, {args.data}")
+    contra = sum(lean[h]["contradicts"] for h in HYPOTHESES)
+    print(f"lean: " + " | ".join(f"{HYP_LABEL[h]} net {lean[h]['net']:+d}" for h in ("h1", "h2", "h3"))
+          + f"  ({contra} contradicting claims surfaced)")
 
 
 if __name__ == "__main__":

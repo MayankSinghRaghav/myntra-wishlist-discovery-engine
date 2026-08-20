@@ -7,85 +7,81 @@
 <style>
   :root{
     --ink:#1a1a1a; --muted:#5a5f66; --line:#e2e5e9; --bg:#ffffff; --panel:#f7f8fa;
-    --h1:#0072b2; --h2:#e69f00; --h3:#009e73; --accent:#117733;
-    --bad:#a01818; --ok:#117733; --warn:#8a6d00;
+    --h1:#0072b2; --h2:#e69f00; --h3:#7d3ac1; --other:#9098a1;
+    --support:#117733; --contra:#a01818; --neutral:#8a8f96;
   }
   *{box-sizing:border-box}
   body{margin:0;font:16px/1.55 system-ui,Segoe UI,Roboto,sans-serif;color:var(--ink);background:var(--bg)}
-  .wrap{max-width:1060px;margin:0 auto;padding:28px 20px 80px}
-  h1{font-size:26px;margin:0 0 4px} h2{font-size:19px;margin:34px 0 12px}
-  .sub{color:var(--muted);margin:0 0 6px}
-  .tag{display:inline-block;font-size:12px;padding:2px 8px;border-radius:20px;border:1px solid var(--line);color:var(--muted)}
-  .headline{background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--accent);
-            border-radius:10px;padding:14px 18px;margin:18px 0;font-size:18px;font-weight:600}
-  .stats{display:flex;flex-wrap:wrap;gap:10px}
+  .wrap{max-width:1080px;margin:0 auto;padding:28px 20px 80px}
+  h1{font-size:26px;margin:0 0 4px} h2{font-size:19px;margin:34px 0 10px}
+  .sub{color:var(--muted);margin:0 0 8px}
+  .tag{display:inline-block;font-size:12px;padding:2px 8px;border-radius:20px;border:1px solid var(--line);color:var(--muted);margin-right:4px}
+  .stats{display:flex;flex-wrap:wrap;gap:10px;margin-top:6px}
   .stat{flex:1 1 150px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px 14px}
   .stat b{display:block;font-size:26px} .stat span{color:var(--muted);font-size:13px}
   table{border-collapse:collapse;width:100%;font-size:14px}
   th,td{border:1px solid var(--line);padding:8px 10px;text-align:left;vertical-align:top}
   th{background:var(--panel)}
-  .bar{height:9px;border-radius:5px;background:#dfe3e7;position:relative;min-width:60px}
-  .bar>i{position:absolute;inset:0;border-radius:5px}
-  .badge{font-size:12px;font-weight:700;padding:2px 8px;border-radius:6px;text-transform:uppercase}
-  .supported{background:#dff0e6;color:var(--ok)} .rejected{background:#f6dede;color:var(--bad)}
-  .partial{background:#fbf1d6;color:var(--warn)}
-  .lead{outline:2px solid var(--accent);outline-offset:-2px}
-  .q{border-left:3px solid #bbb;padding:4px 10px;margin:6px 0;color:#333;font-style:italic;font-size:14px}
+  .bar{height:10px;border-radius:5px;background:#e3e6ea;position:relative;min-width:40px;display:inline-block;width:100%}
+  .bar>i{position:absolute;left:0;top:0;bottom:0;border-radius:5px}
+  .badge{font-size:11px;font-weight:700;padding:2px 7px;border-radius:5px;color:#fff;white-space:nowrap}
+  .b-h1{background:var(--h1)} .b-h2{background:var(--h2)} .b-h3{background:var(--h3)} .b-other{background:var(--other)}
+  .s-supports{background:var(--support)} .s-contradicts{background:var(--contra)} .s-neutral{background:var(--neutral)}
+  .conf-high{color:var(--support);font-weight:700} .conf-med{color:var(--h2);font-weight:700} .conf-low{color:var(--muted)}
+  .q{border-left:3px solid #bbb;padding:3px 10px;margin:5px 0;color:#333;font-style:italic;font-size:13px}
   .src{font-style:normal;font-size:12px;color:var(--muted)}
   .ask{display:flex;gap:8px;margin:8px 0} .ask input{flex:1;padding:10px 12px;font-size:15px;border:1px solid var(--line);border-radius:8px}
-  .ask button{padding:10px 16px;font-size:15px;border:0;border-radius:8px;background:var(--accent);color:#fff;cursor:pointer}
-  .refuse{background:#f6dede;border:1px solid #e5b8b8;color:var(--bad);border-radius:8px;padding:12px 14px}
+  .ask button{padding:10px 16px;font-size:15px;border:0;border-radius:8px;background:#117733;color:#fff;cursor:pointer}
+  .refuse{background:#f6dede;border:1px solid #e5b8b8;color:var(--contra);border-radius:8px;padding:12px 14px}
   .answer{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:10px 14px}
-  .htag{font-size:11px;font-weight:700;color:#fff;border-radius:4px;padding:1px 5px;margin-right:4px}
-  .muted{color:var(--muted)} .small{font-size:13px}
+  .muted{color:var(--muted)} .small{font-size:13px} details{margin-top:4px}
   code{background:var(--panel);padding:1px 5px;border-radius:4px}
 </style>
 </head>
 <body>
 <div class="wrap">
   <h1>🛍️ Myntra Wishlist→Purchase — Discovery Engine</h1>
-  <p class="sub">Why do users <b>save</b> fashion items but not <b>buy</b> them? Three pre-registered
-     hypotheses, coded independently per document, reported <b>per intent-segment</b> — no single ranked winner.</p>
+  <p class="sub">Surfaces <b>auditable evidence</b> about why users save fashion items but don't buy them,
+     mapped to three <b>frozen</b> hypotheses with a <b>stance</b> (supports / contradicts). It diagnoses and
+     stops — <b>it proposes no solution.</b> Each claim is audited per-claim against blind interviews.</p>
   <p><span class="tag" id="sampleTag" hidden>⚠ sample data — real run pending</span>
-     <span class="tag">pre-registered: hypotheses.md</span>
+     <span class="tag">frozen: hypotheses.md</span>
      <span class="tag">closed taxonomy</span>
-     <span class="tag">≥2-source rule</span></p>
+     <span class="tag">every claim traceable to a verbatim quote</span></p>
 
-  <div class="headline" id="headline">…</div>
-
+  <h2>Corpus <span class="small muted">(slide-3 size — honest counts)</span></h2>
   <div class="stats" id="stats"></div>
+  <p class="small muted" id="manifestLine"></p>
 
-  <h2>Hypotheses — overall</h2>
-  <p class="small muted">Decision rules pre-registered: supported ≥15% · rejected &lt;8% and leads no segment · else partial.</p>
-  <table id="hypTable"></table>
-  <p class="small" id="noneLine"></p>
-  <p class="small muted" id="mixLine"></p>
+  <h2>Hypothesis lean <span class="small muted">— supports vs contradicts (corpus-only, pre-interview)</span></h2>
+  <p class="small muted">Contradicting evidence is kept, never collapsed — a tall red bar is the engine helping to
+     <b>kill</b> a hypothesis. This is a lean, not a verdict.</p>
+  <table id="lean"></table>
 
-  <h2>The split — hypothesis share within each intent-segment</h2>
-  <p class="small muted">Averaging across segments is exactly what hid the split last time. The leading cell in each row is outlined.</p>
-  <table id="matrix"></table>
+  <h2>Claim register <span class="small muted">— ranked; feeds the slide-4 audit table</span></h2>
+  <p class="small muted">Verdict (Held up / Partly invented / Rejected) is filled later from blind interviews. Every
+     claim is re-openable to its verbatim quote + URL.</p>
+  <table id="register"></table>
 
-  <h2>Audit table — AI claims for primary research</h2>
-  <p class="small muted">Verdict (Held up / Partly invented / Rejected) is filled by primary research. Every claim clears the ≥2-source rule.</p>
-  <table id="audit"></table>
+  <h2>Segment signal <span class="small muted">— for the interview screener</span></h2>
+  <div id="segment" class="small"></div>
 
   <h2>Discard pile</h2>
-  <p class="small muted">Shown for honesty — what the engine threw away.</p>
   <div id="discard" class="small"></div>
 
   <h2>Ask the evidence <span class="small muted">(refuses when evidence is thin)</span></h2>
-  <p class="small muted">Client-side lexical retrieval over verbatim quotes. It refuses if no strong match exists or the
-     evidence comes from fewer than 2 independent sources — it never generates an unsupported answer.</p>
+  <p class="small muted">Client-side lexical retrieval over verbatim quotes. Refuses if fewer than 3 documents
+     match or the evidence spans &lt;2 independent platforms — it never generates an unsupported answer.</p>
   <div class="ask">
-    <input id="q" placeholder='e.g. "size runs small" — or try "weather in delhi" to see it refuse'
-           onkeydown="if(event.key==='Enter')ask()">
+    <input id="q" placeholder='e.g. "size fit" — or try "weather in delhi" to see it refuse' onkeydown="if(event.key==='Enter')ask()">
     <button onclick="ask()">Ask</button>
   </div>
   <div id="ans"></div>
 
   <p class="small muted" style="margin-top:40px">
-    Hypothesis generator over complaint-skewed public text — not proof. See <code>hypotheses.md</code>,
-    <code>audit_table.md</code>, <code>findings.md</code>. No API key at runtime.</p>
+    Diagnosis over complaint-skewed public text — not proof, no solution. Artifacts:
+    <code>claims_register.json</code>, <code>corpus_manifest.json</code>, <code>early_signal.md</code>,
+    <code>hypotheses.md</code>. No API key at runtime.</p>
 </div>
 <script src="app.js"></script>
 </body>
