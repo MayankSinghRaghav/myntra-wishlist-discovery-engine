@@ -1,67 +1,81 @@
-# Myntra Wishlist→Purchase — Discovery Engine
+# Myntra Wishlist→Purchase — AI Discovery Engine
 
-An AI-powered **product-discovery engine** for a Growth-PM case study. It mines
-public user text to discover *why people save fashion items on Myntra but don't buy them*,
-classifies the **non-price** barriers, ranks opportunities, and exposes everything in a
-deployed dashboard.
+Mines public user text to test **why people save fashion items on Myntra but don't buy them**.
+Unlike a typical theme-ranker, this engine is built to **produce disconfirming evidence**: three
+hypotheses are **pre-registered before any run**, every document is coded **independently** on all
+three, results are reported **per intent-segment (never averaged)**, and every AI-surfaced claim
+lands in an **audit table** for primary research to confirm or kill.
 
-> It is a **hypothesis generator, not proof.** Reach = *complaint-share*, not true prevalence.
-> Every wishlist→purchase link is a hypothesis to validate with product analytics/experiments.
+> Hypothesis generator over complaint-skewed public text — **not proof.** Shares are
+> complaint-share, not user prevalence. Every wishlist→purchase link is a hypothesis.
 
-**Goal:** raise the 30-day **Wishlist→Purchase** user conversion rate.
-**Hard constraint:** no monetary incentives (no discounts/coupons/cashback) — so we hunt
-non-price barriers: uncertainty, confidence, timing, decision quality.
+## Why this shape (what changed)
 
-### 🔴 Kill-switch metric
-We explicitly measure the share of texts whose blocker is **price** (`intent=price_waiter`
-OR `price_value` barrier) vs **non-price**. If price dominates, the whole non-monetary
-strategy has a low ceiling. That number is reported in [`findings.md`](findings.md) and on
-the dashboard.
+A ranked "opportunity score" picks a winner and primes every downstream source to agree. This
+engine has **no single ranked output**. Its unit of output is *evidence share per hypothesis, per
+segment* — a **split** (e.g. "H1 leads deferred-purchase, H3 leads mood-board") is the target
+finding, and a hypothesis can be **rejected** by pre-registered thresholds.
 
----
+### Pre-registered hypotheses (see [`hypotheses.md`](hypotheses.md), committed before any run)
+- **H1 — Uncertainty blocks conversion** (fit/size/quality/authenticity/styling/social unresolved).
+- **H2 — Relevance decays** (occasion passed, trend moved, forgot, bought elsewhere).
+- **H3 — Wishlist ≠ purchase intent** (mood-board, price-watch, catalogue-browse, size-hold).
 
 ## Pipeline
 
 ```
-collect.py   →  raw_data.csv          public text (Play / YouTube / Reddit), PII-stripped, deduped
-classify.py  →  classified_data.csv   Gemini labels (barrier, intent, journey, emotion, evidence span)
-analyze.py   →  opportunities.csv      gated + scored opportunities
-             →  findings.md            insight cards + kill-switch number + limitations
-app.py       →  Streamlit dashboard    reads the CSVs, NO Gemini at runtime (keyless)
+collect.py   →  raw_data.csv          public text (Play + YouTube + Reddit), PII-stripped, deduped
+classify.py  →  classified_data.csv   Gemini: is_relevant, intent_segment, H1/H2/H3 {present,conf,verbatim span}, topic
+analyze.py   →  data.json             H1/H2/H3 × segment matrix, "none" share, model-mix, audit table, discard pile, RAG index
+             →  audit_table.csv/.md    Claim | Sources | Docs | 3 verbatim quotes | Verdict(pending)
+             →  holdout_sample.csv     blind hold-out template + holdout_rubric.md
+             →  findings.md            honest narrative (the split, decisions, discard pile, limits)
+index.html   →  static dashboard       reads data.json, client-side RAG, NO API key at runtime
 ```
 
-## Setup
+## Design guarantees
+
+- **Pre-registration.** Classification cannot run until `hypotheses.md` is committed; that commit
+  is the timestamp. Decision thresholds (support ≥15%, reject <8% & leads no segment) are set there.
+- **Independent dual-hypothesis coding.** A doc may support several / one / **none**; the **"none"
+  share is tracked and reported**, not hidden.
+- **Closed taxonomy only** — no free-form theme invention (segments + topics are fixed enums,
+  out-of-set values are coerced).
+- **Every quote verbatim-checked.** A span is kept only if it is a normalized substring of its
+  source; a hypothesis flagged `present` with no verifiable span is downgraded to absent.
+- **Cross-source rule.** A claim is reported only with **≥2 independent sources**; single-source
+  themes go to the discard pile. The RAG chat **refuses** on thin or single-source evidence.
+- **Model-mix transparency + rule fallback.** If the free tier fails a batch, rows fall back to a
+  keyword **rule classifier tagged `rule_fallback`** — logged, surfaced, and **never counted as AI**.
+- **Discard pile shown** — not-relevant rows, "none" docs, weak/single-source cells.
+- **Blind hold-out.** `holdout_sample.csv` is hand-coded against the same rubric; agreement is
+  reported once, plainly.
+
+All prompts are in the source: the classification prompt is `PROMPT` in
+[`classify.py`](classify.py); the coding rules and thresholds are in [`hypotheses.md`](hypotheses.md).
+
+## Run it
 
 ```bash
-python -m venv .venv && . .venv/Scripts/activate      # Windows: .venv\Scripts\activate
-pip install -r requirements-pipeline.txt              # to re-run the pipeline
-pip install -r requirements.txt                       # just to run the app
-```
+python -m venv .venv && . .venv/Scripts/activate     # Windows: .venv\Scripts\activate
+pip install -r requirements-pipeline.txt
 
-Gemini key (classification only — never hardcoded):
+# 1. Collect ≥2 sources (Play keyless; YouTube keyless; Reddit needs a free key)
+python collect.py --play-count 2500 --also-relevant 500 -o raw_data.csv
+python collect.py --youtube videos.txt --per-video 300 -o raw_data.csv   # 1 Myntra-haul URL per line
+export REDDIT_CLIENT_ID=... REDDIT_CLIENT_SECRET=...
+python collect.py --reddit -o raw_data.csv
 
-```bash
+# 2. Classify (batched, resumable — safe to Ctrl-C / re-run; free-tier flash-lite)
 export GEMINI_API_KEY=your_key      # PowerShell: $env:GEMINI_API_KEY="your_key"
-```
+python classify.py --limit 30       # small live test first
+python classify.py                  # full corpus
 
-## Run each step
+# 3. Analyze → data.json + audit table + findings
+python analyze.py
 
-```bash
-# 1. Collect (~2500 Play Store reviews; add YouTube/Reddit optionally)
-python collect.py --play-count 2500 -o raw_data.csv
-python collect.py --youtube videos.txt --per-video 300 -o raw_data.csv   # 1 URL per line
-python collect.py --reddit                                               # needs REDDIT_CLIENT_ID/SECRET
-
-# 2. Classify with Gemini (batched, resumable — safe to re-run / Ctrl-C)
-python classify.py -i raw_data.csv -o classified_data.csv
-python classify.py --limit 30            # small test run first
-
-# 3. Analyze → opportunities + findings
-python analyze.py -i classified_data.csv
-python analyze.py --embedder st          # optional: sentence-transformers MiniLM sub-themes
-
-# 4. Dashboard
-streamlit run app.py
+# 4. Dashboard (static — just serve the folder)
+python -m http.server 8099          # open http://localhost:8099
 
 # offline sanity checks (no network, no key)
 python test_pipeline.py
@@ -69,41 +83,28 @@ python test_pipeline.py
 
 Each script has `--selftest` and `-h`.
 
-## Deploy (Streamlit Community Cloud)
+## Deploy (Vercel — static, keyless, free)
 
-Repo: <https://github.com/MayankSinghRaghav/myntra-wishlist-discovery-engine>
+The site is plain `index.html` + `app.js` + `data.json` (no framework, no build). `vercel.json`
+pins it as a static project.
 
-**One-click deploy:**
-<https://share.streamlit.io/deploy?repository=MayankSinghRaghav/myntra-wishlist-discovery-engine&branch=main&mainModule=app.py>
+```bash
+npm i -g vercel
+vercel            # first deploy (preview)
+vercel --prod     # public URL
+```
 
-Or manually:
-1. Go to <https://share.streamlit.io> → sign in with GitHub → **Create app** → **Deploy a public app from GitHub**.
-2. Repository `MayankSinghRaghav/myntra-wishlist-discovery-engine`, branch `main`, main file `app.py`.
-3. **No secrets needed** — the app only reads the committed (PII-stripped) CSVs and never calls Gemini. Deploy → public URL.
-
-`requirements.txt` is intentionally minimal (streamlit/pandas/plotly) to keep the cloud build
-fast; the heavier pipeline deps live in `requirements-pipeline.txt`.
+Or connect the GitHub repo in the Vercel dashboard → Framework **Other** → Deploy. No env vars,
+no secrets: the app only reads the committed (PII-stripped) `data.json` and never calls an LLM.
 
 ## Data & privacy
 
-- **No PII committed.** Author names/handles are never stored — only public review text,
-  rating, date, source URL, and labels.
-- **No fabricated data.** Every row traces to a real public post; every label carries a
-  verbatim `evidence_span` for hand-auditing.
+- **No PII.** Author names/handles are never stored — only public text, rating, date, source URL, labels.
+- **No fabricated volume.** Every row traces to a real public post; per-source counts are logged honestly.
+  A connector wired but not ingested is labelled as such, not padded.
 - Dedup by SHA-256 of normalized text.
-
-## Taxonomy (barriers)
-
-`fit_uncertainty, size_uncertainty, quality_uncertainty, authenticity_trust,
-style_occasion_match, choice_overload, info_insufficient, conflicting_reviews,
-social_validation_need, needs_external_comparison, price_value, delivery_returns,
-stockout, forgetting, none, other`
-
-Opportunity score = `2·MetricRelevance + 1.5·Severity + 1·Reach`, then × evidence discount
-(explicit 1.0 / strong 0.7 / weak 0.4). Monetary (`price_value`) and non-actionable
-(`none`, `other`) barriers are **gated out** and logged.
 
 ## Limitations
 
-Complaint-skewed · English-skewed · app-review text ≠ the wishlist funnel · no true
-frequencies. See the full paragraph in [`findings.md`](findings.md).
+Complaint-skewed · English-biased collection · app/forum text is a **proxy** for the wishlist
+funnel · no true per-user frequencies. Full paragraph in [`findings.md`](findings.md).

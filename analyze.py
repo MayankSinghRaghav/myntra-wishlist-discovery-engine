@@ -1,395 +1,376 @@
 """
-analyze.py — Step 3. Turn labels into ranked opportunities + findings.md.
+analyze.py — Step 3. Turn dual-hypothesis labels into a per-hypothesis, per-segment
+report that can REJECT a hypothesis — not a single ranked winner.
 
-Pipeline:
-  1. filter to is_relevant, compute distributions (overall + by source)
-  2. KILL-SWITCH: price vs non-price blocker share
-  3. sub-themes: TF-IDF + KMeans within each top barrier (--embedder st for MiniLM)
-  4. opportunity scoring: gate -> 3 ordinal bands -> weighted score x evidence discount
-  5. write opportunities.csv + findings.md
+Emits (all deck- and app-ready):
+  data.json        frontend artifact: corpus/source stats, model-mix, the H1/H2/H3 x segment
+                   matrix, "none" share, decisions, audit table, discard pile, retrieval index
+  audit_table.csv  Claim | Sources | Doc count | 3 verbatim quotes | Verdict(blank)
+  audit_table.md   same, screenshot-ready for the deck
+  holdout_sample.csv + holdout_rubric.md   blind hold-out template (hand-coded later)
+  findings.md      honest narrative (the split, decisions, discard pile, limits)
 
-Reach = complaint-share (NOT true prevalence). MetricRelevance is a HYPOTHESIS.
+Thresholds are pre-registered in hypotheses.md and imported here, not tuned to the result.
 
 Run:  python analyze.py -i classified_data.csv
-      python analyze.py --embedder st     # use sentence-transformers MiniLM
-      python analyze.py --selftest         # offline scoring checks
+      python analyze.py --selftest        # offline logic checks
 """
 from __future__ import annotations
 
 import argparse
+import csv
+import json
 import sys
 
-import numpy as np
 import pandas as pd
 
-# blocking emotions => higher severity (data-driven, not hand-set per barrier)
-BLOCKING_EMOTIONS = {"anxious", "overwhelmed", "indecisive", "skeptical", "frustrated"}
-EVIDENCE_DISCOUNT = {"explicit": 1.0, "strong_inference": 0.7, "weak_inference": 0.4}
+from classify import HYPS, INTENT_SEGMENTS, TOPICS  # closed taxonomies — single source of truth
 
-# App reviews skew post-purchase; a barrier voiced mostly AFTER buying is weakly linked
-# to the PRE-purchase wishlist->buy decision. We discount score by its pre-purchase share.
-PRE_STAGES = {"discovery", "consideration", "shortlisting", "evaluation", "decision"}
-POST_STAGES = {"purchase", "post_purchase"}
+# ---- pre-registered decision rules (see hypotheses.md) ----------------------
+SUPPORT_MIN = 0.15      # >= => supported overall (with >=2 sources)
+REJECT_MAX = 0.08       # <  => rejected IF it also leads no segment
+MIN_SOURCES = 2         # cross-source rule: a reported claim needs >=2 distinct sources
+MIN_CLAIM_DOCS = 5      # a claim row needs at least this many documents
+HEADLINE_TIE = 0.05     # overall shares within this band + no segment split => "no dominant mechanism"
 
-# Per-barrier PM playbook. Evidence (quotes/counts) is pulled from REAL rows;
-# these narrative fields are clearly-labelled HYPOTHESES, not measured facts.
-#   funnel: re-exposure | re-engagement | confidence
-#   mr: hypothesised MetricRelevance band (link strength to wishlist->purchase) 1/2/3
-PLAYBOOK = {
-    "fit_uncertainty": dict(funnel="confidence", mr=3,
-        hyp="Users can't predict how a garment will fit their body, so a saved item stalls at decision.",
-        workaround="They ask in comments, check other reviews, or just don't buy.",
-        opp="Fit-confidence layer on the wishlist: per-item fit signals, 'fits like' from similar bodies, model-measurement match.",
-        disconf="If fit complaints cluster in POST-purchase (returns) not pre-purchase, the block is quality/returns, not decision-stage fit.",
-        validate="A/B a wishlist fit-signal badge; measure 30-day wishlist->purchase lift for exposed users."),
-    "size_uncertainty": dict(funnel="confidence", mr=3,
-        hyp="Inconsistent sizing across brands makes users unsure which size to order from a saved item.",
-        workaround="They order two sizes intending to return one, or abandon the save.",
-        opp="Size recommender on wishlist items using the user's past kept-vs-returned sizes per brand.",
-        disconf="If users buy anyway and return, this is a returns-cost problem, not a save->buy block.",
-        validate="Show a personalised size hint on wishlist; track add-to-cart and purchase from wishlist."),
-    "quality_uncertainty": dict(funnel="confidence", mr=2,
-        hyp="Photos look better than the delivered product, so users hesitate to commit to saved items.",
-        workaround="They wait for more reviews or seek real-user photos.",
-        opp="Surface verified buyer photos + quality-rating breakdown on the wishlist card.",
-        disconf="If quality doubt is brand-specific, a global quality badge won't move conversion.",
-        validate="Add buyer-photo count to wishlist cards; measure purchase from wishlist vs control."),
-    "authenticity_trust": dict(funnel="confidence", mr=2,
-        hyp="Users doubt product authenticity/originality, blocking commitment to saved branded items.",
-        workaround="They cross-check price/seller elsewhere or avoid buying.",
-        opp="Authenticity assurance (brand-authorised seller badge, guarantee) on wishlist branded items.",
-        disconf="If distrust is app-wide sentiment not tied to saved items, a badge won't lift conversion.",
-        validate="Expose authenticity badge on saved branded items; measure conversion delta."),
-    "style_occasion_match": dict(funnel="confidence", mr=2,
-        hyp="Users are unsure the saved item suits their occasion / existing wardrobe.",
-        workaround="They save many similar items and never decide (see choice_overload).",
-        opp="'Complete the look' / occasion tags on wishlist to resolve match doubt.",
-        disconf="If saves are pure inspiration with no buy intent, styling won't convert them.",
-        validate="Add occasion match cues to wishlist; measure shortlisting->purchase."),
-    "choice_overload": dict(funnel="re-engagement", mr=3,
-        hyp="Wishlists become graveyards: too many saved items, no way to decide, so nothing gets bought.",
-        workaround="Users let the list grow and forget it.",
-        opp="Wishlist decision aids: sort/compare saved items, 'pick for me', decayed re-surfacing of top saves.",
-        disconf="If small wishlists also don't convert, overload isn't the binding constraint.",
-        validate="Ship a wishlist compare/'top 3' nudge; measure 30-day wishlist->purchase."),
-    "info_insufficient": dict(funnel="confidence", mr=2,
-        hyp="Missing product info (fabric, care, exact measurements) leaves users unable to decide on a save.",
-        workaround="They hunt in reviews/Q&A or drop the item.",
-        opp="Fill the info gap on wishlist cards (measurements, fabric, care) pulled from catalog/Q&A.",
-        disconf="If items with full info also stall, info isn't the block.",
-        validate="Enrich wishlist card detail; measure purchase from wishlist."),
-    "conflicting_reviews": dict(funnel="confidence", mr=2,
-        hyp="Mixed reviews create decision paralysis on saved items.",
-        workaround="Users keep reading reviews, never resolving.",
-        opp="Review summary + 'most helpful' synthesis on the wishlist card.",
-        disconf="If low-review items convert similarly, review conflict isn't decisive.",
-        validate="Add AI review summary to saved items; measure conversion."),
-    "social_validation_need": dict(funnel="confidence", mr=1,
-        hyp="Users want a second opinion before buying a saved item.",
-        workaround="They screenshot and ask friends off-app.",
-        opp="Share-wishlist-for-opinions / poll a friend feature.",
-        disconf="If shared items don't convert more, social proof isn't the block.",
-        validate="Ship wishlist share-for-vote; measure purchase of voted items."),
-    "needs_external_comparison": dict(funnel="confidence", mr=1,
-        hyp="Users leave to compare price/availability elsewhere and don't return to buy the save.",
-        workaround="They open other apps/tabs and get distracted.",
-        opp="On-app comparison context (price history, similar-in-Myntra) to keep the decision in-app.",
-        disconf="If comparers return and buy anyway, leakage isn't fatal.",
-        validate="Add in-app comparison to wishlist; measure return-and-buy rate."),
-    "delivery_returns": dict(funnel="confidence", mr=2,
-        hyp="Uncertainty about return ease/cost for a saved item lowers commitment.",
-        workaround="They avoid buying items they're unsure they can return cleanly.",
-        opp="Clear, item-level return terms + 'easy return' assurance on wishlist cards.",
-        disconf="If returns worry is post-purchase only, it doesn't block the save->buy step.",
-        validate="Surface return terms on saved items; measure conversion."),
-    "stockout": dict(funnel="re-exposure", mr=3,
-        hyp="Saved items go out of stock (esp. the user's size) before they decide to buy.",
-        workaround="They wait and it never comes back; the save dies.",
-        opp="Back-in-stock + low-stock alerts for wishlisted sizes; reserve-my-size.",
-        disconf="If in-stock saves convert at the same low rate, stockout isn't the driver.",
-        validate="Ship size-level back-in-stock alerts; measure wishlist->purchase for alerted users."),
-    "forgetting": dict(funnel="re-engagement", mr=3,
-        hyp="Users save and simply forget; without a nudge the intent decays.",
-        workaround="Nothing — the item sits unbought.",
-        opp="Timely, non-price wishlist reminders (new reviews, restock, price-drop-agnostic 'still interested?').",
-        disconf="If reminded users unsubscribe or ignore, forgetting wasn't the real block.",
-        validate="A/B non-price wishlist reminders; measure 30-day wishlist->purchase lift."),
+HYP_NAME = {
+    "h1": "H1 — uncertainty blocks conversion",
+    "h2": "H2 — relevance decays",
+    "h3": "H3 — wishlist ≠ purchase intent",
 }
-
-MONETARY_BARRIERS = {"price_value"}           # gated out: not non-monetary-addressable
-NON_ACTIONABLE = {"none", "other"}            # gated out: not a discrete opportunity
+BOOL_COLS = ["is_relevant", "is_myntra_specific"] + [f"{h}_present" for h in HYPS]
 
 
-# ---------------------------------------------------------------- helpers
-def explode_barriers(df: pd.DataFrame) -> pd.Series:
-    return df["barriers"].fillna("none").str.split("|").explode().str.strip()
+# ---------------------------------------------------------------- io
+def load(path: str) -> pd.DataFrame:
+    df = pd.read_csv(path, dtype=str).fillna("")
+    for c in BOOL_COLS:
+        df[c] = df[c].str.lower().isin({"true", "1", "yes"})
+    for h in HYPS:
+        df[f"{h}_conf"] = pd.to_numeric(df[f"{h}_conf"], errors="coerce").fillna(0.0)
+    if "method" not in df:
+        df["method"] = "gemini"
+    return df
 
 
-def band(value: float, lo: float, hi: float) -> int:
-    """Map a 0..1 value to an ordinal band 1/2/3 by two thresholds."""
-    return 3 if value >= hi else (2 if value >= lo else 1)
+def _quotes(sub: pd.DataFrame, h: str, k: int = 3) -> list[dict]:
+    """Up to k distinct verified spans for hypothesis h, preferring distinct sources."""
+    out, seen_txt, seen_src = [], set(), set()
+    pool = sub[sub[f"{h}_span"].str.len() > 0]
+    for prefer_new_src in (True, False):        # first pass: spread across sources
+        for _, r in pool.iterrows():
+            q = r[f"{h}_span"].strip()
+            if q in seen_txt:
+                continue
+            if prefer_new_src and r["source"] in seen_src:
+                continue
+            out.append({"quote": q, "source": r["source"], "url": r["url"], "doc_id": r["doc_id"]})
+            seen_txt.add(q)
+            seen_src.add(r["source"])
+            if len(out) >= k:
+                return out
+    return out
 
 
-def band_label(b: int) -> str:
-    return {1: "Low", 2: "Med", 3: "High"}[b]
+def _decide(overall: float, leads_any_segment: bool) -> str:
+    if overall >= SUPPORT_MIN:
+        return "supported"
+    if overall < REJECT_MAX and not leads_any_segment:
+        return "rejected"
+    return "partial"
 
 
-def score_row(reach: int, severity: int, metric_rel: int, evidence_conf: float) -> float:
-    """score = 2*MR + 1.5*Sev + 1*Reach, then x evidence discount (per spec)."""
-    return round((2 * metric_rel + 1.5 * severity + 1 * reach) * evidence_conf, 3)
-
-
-def pre_purchase_share(stages: "pd.Series") -> float:
-    """Share of a barrier's texts at PRE-purchase stages (post/pre only; unclear excluded).
-    Returns 0.5 (neutral) if nothing is stage-resolved."""
-    staged = stages[stages.isin(PRE_STAGES | POST_STAGES)]
-    return float(stages.isin(PRE_STAGES).sum() / len(staged)) if len(staged) else 0.5
-
-
-# ---------------------------------------------------------------- sub-themes
-def embed(texts: list[str], mode: str):
-    if mode == "st":
-        from sentence_transformers import SentenceTransformer
-        return SentenceTransformer("all-MiniLM-L6-v2").encode(texts, show_progress_bar=False)
-    from sklearn.feature_extraction.text import TfidfVectorizer
-    vec = TfidfVectorizer(max_features=400, stop_words="english", ngram_range=(1, 2), min_df=2)
-    return vec.fit_transform(texts), vec
-
-
-def subthemes(texts: list[str], mode: str, max_k: int = 3) -> list[dict]:
-    """Cluster a barrier's texts into named sub-needs with representative quotes."""
-    import warnings
-
-    from sklearn.cluster import KMeans
-    from sklearn.exceptions import ConvergenceWarning
-    from sklearn.feature_extraction.text import TfidfVectorizer
-
-    warnings.filterwarnings("ignore", category=ConvergenceWarning)  # dup short reviews -> harmless
-
-    n = len(texts)
-    if n < 8:
-        return [{"name": "general", "size": n, "quotes": _pick_quotes(texts, 2)}]
-    k = max(2, min(max_k, n // 25))
-    if mode == "st":
-        X = embed(texts, "st")
-        km = KMeans(n_clusters=k, n_init=5, random_state=0).fit(X)
-        labels = km.labels_
-        # name clusters via TF-IDF terms of each group
-        vec = TfidfVectorizer(max_features=400, stop_words="english", ngram_range=(1, 2), min_df=1)
-        tfidf = vec.fit_transform(texts)
-        terms = np.array(vec.get_feature_names_out())
-    else:
-        X, vec = embed(texts, "tfidf")
-        km = KMeans(n_clusters=k, n_init=5, random_state=0).fit(X)
-        labels = km.labels_
-        tfidf, terms = X, np.array(vec.get_feature_names_out())
-
-    out = []
-    for c in range(k):
-        idx = np.where(labels == c)[0]
-        if len(idx) == 0:
-            continue
-        centroid = np.asarray(tfidf[idx].mean(axis=0)).ravel()
-        top = terms[centroid.argsort()[::-1][:3]]
-        out.append({
-            "name": ", ".join(top),
-            "size": int(len(idx)),
-            "quotes": _pick_quotes([texts[i] for i in idx], 2),
-        })
-    return sorted(out, key=lambda d: d["size"], reverse=True)
-
-
-def _pick_quotes(texts: list[str], k: int) -> list[str]:
-    uniq = sorted(set(t.strip() for t in texts if 20 <= len(t.strip()) <= 220), key=len, reverse=True)
-    return uniq[:k] or [t.strip()[:200] for t in texts[:k]]
-
-
-# ---------------------------------------------------------------- core analysis
-def analyze(df: pd.DataFrame, embedder: str) -> tuple[pd.DataFrame, dict]:
-    rel = df[df["is_relevant"] == True].copy()  # noqa: E712 -- explicit for readability
+# ---------------------------------------------------------------- core
+def analyze(df: pd.DataFrame) -> dict:
+    rel = df[df["is_relevant"]].copy()
     n_rel = len(rel)
+    segs = sorted(INTENT_SEGMENTS)
 
-    # kill-switch: price vs non-price blocker
-    price_mask = (rel["intent"] == "price_waiter") | rel["barriers"].fillna("").str.contains("price_value")
+    seg_totals = {s: int((rel["intent_segment"] == s).sum()) for s in segs}
+
+    # which hypothesis leads each segment (by within-segment evidence share)
+    seg_leader: dict[str, str] = {}
+    for s in segs:
+        sub = rel[rel["intent_segment"] == s]
+        if len(sub):
+            shares = {h: float(sub[f"{h}_present"].mean()) for h in HYPS}
+            top = max(shares, key=shares.get)
+            seg_leader[s] = top if shares[top] > 0 else ""
+        else:
+            seg_leader[s] = ""
+
+    hyps: dict[str, dict] = {}
+    for h in HYPS:
+        ev = rel[rel[f"{h}_present"]]
+        overall = float(len(ev) / n_rel) if n_rel else 0.0
+        by_seg = {}
+        for s in segs:
+            seg_sub = rel[rel["intent_segment"] == s]
+            seg_ev = seg_sub[seg_sub[f"{h}_present"]]
+            by_seg[s] = {
+                "docs": int(len(seg_ev)),
+                "share": round(float(len(seg_ev) / len(seg_sub)), 4) if len(seg_sub) else 0.0,
+                "sources": sorted(seg_ev["source"].unique().tolist()),
+                "leads": seg_leader.get(s) == h,
+            }
+        leads_any = any(v["leads"] and v["docs"] >= MIN_CLAIM_DOCS for v in by_seg.values())
+        srcs = sorted(ev["source"].unique().tolist())
+        hyps[h] = {
+            "name": HYP_NAME[h],
+            "docs": int(len(ev)),
+            "overall_share": round(overall, 4),
+            "sources": srcs,
+            "n_sources": len(srcs),
+            "mean_conf": round(float(ev[f"{h}_conf"].mean()), 3) if len(ev) else 0.0,
+            "by_segment": by_seg,
+            "decision": _decide(overall, leads_any),
+            "cross_source_ok": len(srcs) >= MIN_SOURCES,
+            "quotes": _quotes(ev, h),
+        }
+
+    none_mask = ~(rel["h1_present"] | rel["h2_present"] | rel["h3_present"])
+    none_share = float(none_mask.mean()) if n_rel else 0.0
+
+    price_mask = (rel["intent_segment"] == "price_watch") | (rel["topic"] == "price_value")
     price_share = float(price_mask.mean()) if n_rel else 0.0
 
-    bexp = explode_barriers(rel)
-    barrier_counts = bexp.value_counts()
+    method_mix = df["method"].value_counts().to_dict()
+    ai_share = float((df["method"] == "gemini").mean()) if len(df) else 0.0
 
-    stats = {
-        "n_total": int(len(df)),
-        "n_relevant": n_rel,
-        "n_myntra_specific": int((rel["is_myntra_specific"] == True).sum()),  # noqa: E712
-        "price_share": price_share,
-        "non_price_share": 1 - price_share,
-        "n_price": int(price_mask.sum()),
-        "intent_mix": rel["intent"].value_counts().to_dict(),
-        "journey_mix": rel["journey_stage"].value_counts().to_dict(),
-        "emotion_mix": rel["emotional_state"].value_counts().to_dict(),
-        "barrier_counts": barrier_counts.to_dict(),
-        "by_source": {s: int(c) for s, c in df["source"].value_counts().items()},
-        "n_auditable": int((rel["evidence_span"].fillna("").str.len() > 0).sum()),
-        "new_patterns": [p for p in rel["new_pattern_note"].fillna("").tolist() if p][:20],
+    # headline: is there a dominant mechanism, or a genuine split?
+    shares = {h: hyps[h]["overall_share"] for h in HYPS}
+    spread = max(shares.values()) - min(shares.values()) if shares else 0.0
+    split = {s: seg_leader[s] for s in segs if seg_leader[s] and seg_totals[s] >= MIN_CLAIM_DOCS}
+    distinct_leaders = len(set(split.values()))
+    if spread < HEADLINE_TIE and distinct_leaders <= 1:
+        headline = "No dominant mechanism — H1/H2/H3 shares are within the pre-registered tie band."
+    else:
+        parts = [f"{seg_leader[s].upper()} leads {s}" for s in split]
+        headline = "Split result — " + "; ".join(parts) if parts else "See per-segment matrix."
+
+    return {
+        "corpus": {
+            "n_total": int(len(df)),
+            "n_relevant": n_rel,
+            "n_myntra_specific": int(rel["is_myntra_specific"].sum()),
+            "sources": {s: int(c) for s, c in df["source"].value_counts().items()},
+            "n_sources": int(df["source"].nunique()),
+        },
+        "model_mix": {"counts": method_mix, "ai_share": round(ai_share, 4)},
+        "segments": {s: seg_totals[s] for s in segs},
+        "hypotheses": hyps,
+        "none_share": round(none_share, 4),
+        "none_docs": int(none_mask.sum()),
+        "price_sanity": {"price_share": round(price_share, 4),
+                         "non_price_share": round(1 - price_share, 4)},
+        "headline": headline,
+        "seg_leader": seg_leader,
     }
 
-    # opportunity scoring
-    survivors, gated = [], []
-    max_count = int(barrier_counts.max()) if len(barrier_counts) else 1
-    for barrier, count in barrier_counts.items():
-        if barrier in NON_ACTIONABLE:
-            gated.append((barrier, int(count), "not a discrete opportunity"))
-            continue
-        if barrier in MONETARY_BARRIERS:
-            gated.append((barrier, int(count), "monetary (excluded by no-incentive constraint)"))
-            continue
-        pb = PLAYBOOK.get(barrier)
-        if pb is None:
-            gated.append((barrier, int(count), "no funnel mapping"))
-            continue
 
-        sub = rel[rel["barriers"].fillna("").str.contains(barrier, regex=False)]
-        share = count / max(n_rel, 1)                       # complaint-share
-        # log-scale so one outlier barrier doesn't flatten every other reach to "Low"
-        reach_b = band(float(np.log1p(count) / np.log1p(max_count)), 0.5, 0.8)
-        blocking = sub["emotional_state"].isin(BLOCKING_EMOTIONS).mean()
-        severity_b = band(float(blocking), 0.33, 0.60)
-        mr_b = pb["mr"]
-        evid_conf = float(sub["evidence_strength"].map(EVIDENCE_DISCOUNT).fillna(0.4).mean())
-        pre_share = pre_purchase_share(sub["journey_stage"])  # reported, NOT folded into score
-        score = score_row(reach_b, severity_b, mr_b, evid_conf)
+# ---------------------------------------------------------------- audit table
+def build_audit_table(rep: dict, rel: pd.DataFrame) -> list[dict]:
+    """One row per reportable claim: overall (supported/partial) + segment-leading cells.
+    Verdict is left blank — Cowork fills Held up / Partly invented / Rejected post-interviews."""
+    rows: list[dict] = []
 
-        st = subthemes(sub["raw_text"].tolist(), embedder) if count >= 8 else \
-            [{"name": "general", "size": int(count), "quotes": _pick_quotes(sub["raw_text"].tolist(), 2)}]
-        # prefer Gemini's verbatim evidence_span (it justifies THIS barrier) over longest raw text
-        spans = sorted({s.strip() for s in sub["evidence_span"].tolist()
-                        if isinstance(s, str) and len(s.strip()) >= 15}, key=len, reverse=True)
-        quotes = spans[:3] or _pick_quotes(sub["raw_text"].tolist(), 3)
-
-        survivors.append({
-            "barrier": barrier, "funnel_level": pb["funnel"],
-            "n_texts": int(count), "complaint_share": round(share, 4),
-            "reach_band": band_label(reach_b), "severity_band": band_label(severity_b),
-            "metric_relevance_band": band_label(mr_b),
-            "reach_score": reach_b, "severity_score": severity_b, "metric_relevance_score": mr_b,
-            "evidence_confidence": round(evid_conf, 3),
-            "pre_purchase_share": round(pre_share, 3), "score": score,
-            "opportunity": pb["opp"], "top_subtheme": st[0]["name"] if st else "",
-            "example_quote": quotes[0] if quotes else "",
-            "_quotes": quotes, "_subthemes": st, "_pb": pb,
-            "note": "Reach=complaint-share (not true prevalence); MetricRelevance=hypothesis.",
+    def _row(claim, sub, h, sources, docs):
+        qs = _quotes(sub, h, 3)
+        rows.append({
+            "claim": claim,
+            "sources": ", ".join(sources),
+            "doc_count": int(docs),
+            "quote_1": qs[0]["quote"] if len(qs) > 0 else "",
+            "quote_2": qs[1]["quote"] if len(qs) > 1 else "",
+            "quote_3": qs[2]["quote"] if len(qs) > 2 else "",
+            "cross_source_ok": len(sources) >= MIN_SOURCES,
+            "verdict": "",   # filled after primary research
         })
 
-    opp = pd.DataFrame(sorted(survivors, key=lambda d: d["score"], reverse=True))
-    if not opp.empty:
-        opp.insert(0, "rank", range(1, len(opp) + 1))
-    stats["gated_out"] = gated
-    return opp, stats
+    for h in HYPS:
+        H = rep["hypotheses"][h]
+        if H["decision"] in ("supported", "partial") and H["docs"] >= MIN_CLAIM_DOCS \
+                and H["cross_source_ok"]:
+            ev = rel[rel[f"{h}_present"]]
+            _row(f"{H['name']} (overall, {H['overall_share']*100:.0f}% of relevant, {H['decision']})",
+                 ev, h, H["sources"], H["docs"])
+        for s, cell in H["by_segment"].items():
+            if cell["leads"] and cell["docs"] >= MIN_CLAIM_DOCS and len(cell["sources"]) >= MIN_SOURCES:
+                sub = rel[(rel["intent_segment"] == s) & (rel[f"{h}_present"])]
+                _row(f"{HYP_NAME[h]} LEADS the '{s}' segment ({cell['share']*100:.0f}% of it)",
+                     sub, h, cell["sources"], cell["docs"])
+    return rows
 
 
-# ---------------------------------------------------------------- findings.md
-def write_findings(opp: pd.DataFrame, stats: dict, path: str = "findings.md") -> None:
-    L = []
-    L.append("# Findings — Myntra Wishlist->Purchase Discovery Engine\n")
-    L.append("_Hypothesis generator from public user text. NOT proof. "
-             "Reach = complaint-share, not true prevalence. MetricRelevance = hypothesised link._\n")
+def discard_pile(df: pd.DataFrame, rep: dict, rel: pd.DataFrame) -> dict:
+    none_docs = rel[~(rel["h1_present"] | rel["h2_present"] | rel["h3_present"])]
+    # single-source / sub-min hypothesis-segment cells that were NOT promoted to a claim
+    weak = []
+    for h in HYPS:
+        for s, cell in rep["hypotheses"][h]["by_segment"].items():
+            if 0 < cell["docs"] < MIN_CLAIM_DOCS or (cell["docs"] and len(cell["sources"]) < MIN_SOURCES):
+                weak.append({"hypothesis": h, "segment": s, "docs": cell["docs"],
+                             "sources": cell["sources"], "why": "sub-min-docs or single-source"})
+    return {
+        "not_relevant": {"count": int((~df["is_relevant"]).sum())},
+        "none_hypothesis": {"count": int(len(none_docs)),
+                            "samples": none_docs["raw_text"].str[:160].head(8).tolist()},
+        "weak_cells": weak,
+    }
 
-    ps = stats["price_share"]
-    L.append("## KILL-SWITCH: price vs non-price blocker\n")
-    L.append(f"- **{ps*100:.1f}%** of relevant texts point to a **price** blocker "
-             f"(`intent=price_waiter` OR `price_value` barrier) — {stats['n_price']}/{stats['n_relevant']} rows.\n")
-    L.append(f"- **{(1-ps)*100:.1f}%** point to **non-price** barriers "
-             "(fit, size, quality, trust, choice overload, stockout, forgetting, ...).\n")
-    verdict = ("Non-price strategy has HEADROOM — most blockers are addressable without discounts."
-               if ps < 0.5 else
-               "WARNING: price dominates — the non-monetary strategy has a low ceiling. Re-scope.")
-    L.append(f"- **Read:** {verdict}\n")
 
-    L.append("\n## Corpus\n")
-    L.append(f"- {stats['n_total']} texts collected; **{stats['n_relevant']} relevant**; "
-             f"{stats['n_myntra_specific']} Myntra-specific.\n")
-    L.append(f"- Sources: {stats['by_source']}\n")
-    L.append(f"- Intent mix: {stats['intent_mix']}\n")
-    L.append(f"- Journey stage: {stats['journey_mix']}\n")
-    L.append(f"- Emotional state: {stats['emotion_mix']}\n")
+def build_index(rel: pd.DataFrame, cap: int = 4000) -> list[dict]:
+    """Client-side RAG index: relevant docs with a display quote + search text."""
+    out = []
+    for _, r in rel.head(cap).iterrows():
+        quote = next((r[f"{h}_span"] for h in HYPS if r[f"{h}_span"].strip()), "")
+        out.append({
+            "doc_id": r["doc_id"], "source": r["source"], "url": r["url"],
+            "segment": r["intent_segment"],
+            "hyps": [h for h in HYPS if r[f"{h}_present"]],
+            "quote": (quote or r["raw_text"][:160]).strip(),
+            "text": r["raw_text"][:240],
+        })
+    return out
 
-    L.append("\n## Ranked opportunities (gated, non-monetary)\n")
-    if opp.empty:
-        L.append("_No survivors — check the corpus._\n")
-    else:
-        L.append("| # | Barrier | Funnel | Score | Reach | Severity | MetricRel | Evid | n | Pre-buy% |\n")
-        L.append("|---|---|---|---|---|---|---|---|---|---|\n")
-        for _, r in opp.iterrows():
-            L.append(f"| {r['rank']} | {r['barrier']} | {r['funnel_level']} | {r['score']} | "
-                     f"{r['reach_band']} | {r['severity_band']} | {r['metric_relevance_band']} | "
-                     f"{r['evidence_confidence']} | {r['n_texts']} | {r['pre_purchase_share']*100:.0f}% |\n")
-        L.append("\n_Pre-buy% = share of the barrier's texts voiced at a PRE-purchase stage. "
-                 "Low % ⇒ mostly post-purchase ⇒ weaker link to the save→buy step (reported, not scored)._\n")
 
-    L.append("\n## Insight cards (top opportunities)\n")
-    for _, r in opp.head(6).iterrows():
-        pb = r["_pb"]
-        q = r["_quotes"][0] if r["_quotes"] else "(no quote)"
-        subs = "; ".join(f"{s['name']} (n={s['size']})" for s in r["_subthemes"][:3])
-        L.append(f"\n### {r['rank']}. {r['barrier']}  \n")
-        L.append(f"- **Observed behavior:** users voice this {r['n_texts']} times "
-                 f"({r['complaint_share']*100:.1f}% of relevant complaints; "
-                 f"{r['pre_purchase_share']*100:.0f}% at a pre-purchase stage).\n")
-        L.append(f"- **Underlying barrier:** {r['barrier']} ({r['funnel_level']} funnel level).\n")
-        L.append(f"- **Root-cause hypothesis:** {pb['hyp']}\n")
-        L.append(f"- **Current workaround:** {pb['workaround']}\n")
-        L.append(f"- **Potential opportunity:** {pb['opp']}\n")
-        L.append(f"- **Sub-themes:** {subs}\n")
-        L.append(f"- **Evidence:** \"{q}\"  (+{r['n_texts']-1} more)\n")
-        L.append(f"- **Confidence:** score {r['score']} | evidence discount {r['evidence_confidence']} "
-                 f"| bands R/S/M = {r['reach_band']}/{r['severity_band']}/{r['metric_relevance_band']}.\n")
-        L.append(f"- **Disconfirming evidence:** {pb['disconf']}\n")
-        L.append(f"- **What would validate/refute:** {pb['validate']}\n")
+# ---------------------------------------------------------------- writers
+def write_audit(rows: list[dict], csv_path: str, md_path: str) -> None:
+    cols = ["claim", "sources", "doc_count", "quote_1", "quote_2", "quote_3",
+            "cross_source_ok", "verdict"]
+    with open(csv_path, "w", newline="", encoding="utf-8") as f:
+        w = csv.DictWriter(f, fieldnames=cols)
+        w.writeheader()
+        w.writerows(rows)
+    L = ["# Audit table — AI-surfaced claims for primary-research verification\n",
+         "_Verdict is filled AFTER interviews/survey: Held up / Partly invented / Rejected._\n\n",
+         "| Claim | Sources | Docs | Sample verbatim quotes | Verdict |\n",
+         "|---|---|---|---|---|\n"]
+    for r in rows:
+        qs = " <br> ".join(f"“{r[q]}”" for q in ("quote_1", "quote_2", "quote_3") if r[q])
+        L.append(f"| {r['claim']} | {r['sources']} | {r['doc_count']} | {qs} | {r['verdict'] or '_(pending)_'} |\n")
+    open(md_path, "w", encoding="utf-8").write("".join(L))
 
-    L.append("\n## Gated-out (logged for honesty)\n")
-    for b, c, why in stats["gated_out"]:
-        L.append(f"- `{b}` (n={c}) — {why}\n")
 
-    if stats["new_patterns"]:
-        L.append("\n## New patterns (barriers not in the taxonomy)\n")
-        for p in dict.fromkeys(stats["new_patterns"]):
-            L.append(f"- {p}\n")
+def write_holdout(rel: pd.DataFrame, n: int = 60) -> None:
+    """Deterministic blind sample (every Nth relevant row) with blank hypothesis columns."""
+    step = max(1, len(rel) // n)
+    sample = rel.iloc[::step].head(n)
+    cols = ["doc_id", "source", "raw_text"]
+    with open("holdout_sample.csv", "w", newline="", encoding="utf-8") as f:
+        w = csv.writer(f)
+        w.writerow(cols + ["h1_present", "h2_present", "h3_present", "intent_segment"])
+        for _, r in sample.iterrows():
+            w.writerow([r["doc_id"], r["source"], r["raw_text"], "", "", "", ""])
+    open("holdout_rubric.md", "w", encoding="utf-8").write(
+        "# Blind hold-out coding rubric\n\n"
+        f"Hand-code the {len(sample)} rows in `holdout_sample.csv` against the SAME rules as "
+        "hypotheses.md, WITHOUT looking at the model's labels. Fill h1/h2/h3_present (true/false) "
+        "and intent_segment, then compare to the model to report one plain agreement number.\n\n"
+        "- **H1** unresolved doubt (fit/size/quality/authenticity/styling/social) on a wanted item.\n"
+        "- **H2** relevance lapsed (occasion passed, forgot, bought elsewhere).\n"
+        "- **H3** the save was never a buy signal (mood-board/price-watch/browse/size-hold).\n"
+        "- A row may be true on several, one, or none.\n"
+        f"- intent_segment ∈ {sorted(INTENT_SEGMENTS)}\n")
 
-    L.append("\n## Bias & limitations\n")
-    L.append("- **Complaint-skewed:** app reviews/comments over-represent the frustrated. "
-             "Reach is complaint-share, NOT the true share of users who hit each barrier.\n")
-    L.append("- **Language-skewed:** collected with `lang=en`; Hinglish/Hindi still surfaced and was "
-             "classified, but pure regional-language reviews are under-sampled.\n")
-    L.append("- **Proxy funnel:** app-review text is NOT the wishlist funnel. Every "
-             "wishlist->purchase link here is a HYPOTHESIS to be validated with product analytics/experiments.\n")
-    L.append("- **No true frequencies:** we cannot say how often each barrier occurs per user, only how often it is *voiced*.\n")
-    L.append(f"- **Auditability:** {stats['n_auditable']}/{stats['n_relevant']} relevant rows carry a "
-             "verbatim `evidence_span`, so any label can be hand-checked against its source quote.\n")
 
-    with open(path, "w", encoding="utf-8") as f:
-        f.write("".join(L))
+def write_findings(rep: dict, audit: list[dict], discard: dict, path: str = "findings.md") -> None:
+    c = rep["corpus"]
+    L = ["# Findings — Myntra Wishlist→Purchase Discovery Engine (Attempt 3)\n\n",
+         "_Pre-registered hypotheses (see `hypotheses.md`), coded independently per document. "
+         "This is a hypothesis generator over complaint-skewed public text, NOT proof. "
+         "Every claim is for primary research to confirm or kill (see `audit_table.md`)._\n\n",
+         f"## Headline\n**{rep['headline']}**\n\n",
+         "> Note: this engine does not emit a single ranked “opportunity score.” The unit of "
+         "output is per-hypothesis evidence share, reported per intent-segment.\n\n",
+         "## Corpus & model mix\n",
+         f"- {c['n_total']} texts; **{c['n_relevant']} relevant**; {c['n_sources']} sources: {c['sources']}\n",
+         f"- Model mix: {rep['model_mix']['counts']} — **{rep['model_mix']['ai_share']*100:.1f}% AI**, "
+         "remainder rule-based fallback (logged, never counted as AI).\n",
+         f"- Price sanity (not the headline): {rep['price_sanity']['price_share']*100:.0f}% price / "
+         f"{rep['price_sanity']['non_price_share']*100:.0f}% non-price.\n\n",
+         "## Hypotheses (overall)\n",
+         "| Hypothesis | Docs | Share | Sources | ≥2 sources | Decision |\n|---|---|---|---|---|---|\n"]
+    for h in HYPS:
+        H = rep["hypotheses"][h]
+        L.append(f"| {H['name']} | {H['docs']} | {H['overall_share']*100:.1f}% | {H['n_sources']} | "
+                 f"{'yes' if H['cross_source_ok'] else 'NO'} | **{H['decision']}** |\n")
+    L.append(f"\n- **“None” (no hypothesis) share: {rep['none_share']*100:.1f}%** "
+             f"({rep['none_docs']} docs) — tracked, not hidden.\n\n")
+
+    L.append("## Per-segment split (H-share within each intent segment)\n")
+    L.append("| Segment | n | H1 | H2 | H3 | leads |\n|---|---|---|---|---|---|\n")
+    for s, tot in rep["segments"].items():
+        cells = {h: rep["hypotheses"][h]["by_segment"][s]["share"] for h in HYPS}
+        lead = rep["seg_leader"].get(s, "") or "—"
+        L.append(f"| {s} | {tot} | {cells['h1']*100:.0f}% | {cells['h2']*100:.0f}% | "
+                 f"{cells['h3']*100:.0f}% | {lead} |\n")
+
+    L.append("\n## Audit table (for primary research)\n")
+    L.append(f"{len(audit)} claims exported to `audit_table.md` — Verdict pending interviews.\n\n")
+    L.append("## Discard pile (shown for honesty)\n")
+    L.append(f"- Not relevant: {discard['not_relevant']['count']} rows.\n")
+    L.append(f"- Supported no hypothesis (“none”): {discard['none_hypothesis']['count']} rows.\n")
+    L.append(f"- Weak/single-source hypothesis-segment cells not promoted to claims: "
+             f"{len(discard['weak_cells'])}.\n\n")
+    L.append("## Limitations\n"
+             "- Complaint-skewed: reviews over-represent the frustrated; shares are complaint-share, "
+             "not user prevalence.\n- English-biased collection (`lang=en`).\n"
+             "- App/forum text is a PROXY for the wishlist funnel — every link is a hypothesis.\n"
+             "- Blind hold-out agreement is reported once in the deck after hand-coding "
+             "`holdout_sample.csv`.\n")
+    open(path, "w", encoding="utf-8").write("".join(L))
 
 
 # ---------------------------------------------------------------- selftest
+def _fake_rel() -> pd.DataFrame:
+    rows = []
+    def add(doc, src, seg, h1, h2, h3, s1="", s2="", s3=""):
+        rows.append({"doc_id": doc, "source": src, "url": "u", "raw_text": f"{s1} {s2} {s3} text",
+                     "is_relevant": True, "is_myntra_specific": True, "intent_segment": seg,
+                     "h1_present": h1, "h1_conf": 0.8 if h1 else 0.0, "h1_span": s1,
+                     "h2_present": h2, "h2_conf": 0.8 if h2 else 0.0, "h2_span": s2,
+                     "h3_present": h3, "h3_conf": 0.8 if h3 else 0.0, "h3_span": s3,
+                     "topic": "fit_uncertainty", "evidence_strength": "explicit", "method": "gemini"})
+    # deferred_purchase: H1-heavy across 2 sources; mood_board: H3-heavy across 2 sources
+    for i in range(6):
+        add(f"d{i}", "google_play" if i % 2 else "reddit", "deferred_purchase", True, False, False, s1="not sure of size")
+    for i in range(6):
+        add(f"m{i}", "youtube" if i % 2 else "reddit", "mood_board", False, False, True, s3="just for inspo")
+    add("none1", "reddit", "unclear", False, False, False)   # a real "none"
+    return pd.DataFrame(rows)
+
+
 def _selftest() -> None:
-    assert band(0.1, 0.33, 0.66) == 1 and band(0.5, 0.33, 0.66) == 2 and band(0.9, 0.33, 0.66) == 3
-    # MetricRelevance weighted highest: raising MR beats raising Reach by the same step
-    base = score_row(1, 1, 1, 1.0)
-    assert score_row(2, 1, 1, 1.0) - base > score_row(1, 1, 1, 1.0) - base  # sanity noop
-    assert score_row(1, 1, 2, 1.0) > score_row(2, 1, 1, 1.0), "MR must outweigh Reach"
-    assert score_row(1, 1, 1, 0.4) < score_row(1, 1, 1, 1.0), "evidence discount must reduce score"
-    assert abs(pre_purchase_share(pd.Series(["decision", "post_purchase", "unclear"])) - 0.5) < 1e-9
-    assert pre_purchase_share(pd.Series(["unclear", "unclear"])) == 0.5  # nothing staged -> neutral
-    assert _pick_quotes(["short", "a decent length sentence about fit and size " * 2], 1)
+    assert _decide(0.2, False) == "supported"
+    assert _decide(0.05, False) == "rejected"
+    assert _decide(0.05, True) == "partial"      # leads a segment => not rejected
+    assert _decide(0.10, False) == "partial"
+    rel = _fake_rel()
+    df = rel.copy()
+    df.loc[len(df)] = {**{c: "" for c in df.columns}, "doc_id": "irr", "source": "reddit",
+                       "raw_text": "app crashed", "is_relevant": False, "is_myntra_specific": False,
+                       "intent_segment": "unclear", "h1_present": False, "h2_present": False,
+                       "h3_present": False, "h1_conf": 0.0, "h2_conf": 0.0, "h3_conf": 0.0,
+                       "topic": "other", "evidence_strength": "weak_inference", "method": "gemini"}
+    rep = analyze(df)
+    assert rep["seg_leader"]["deferred_purchase"] == "h1", rep["seg_leader"]
+    assert rep["seg_leader"]["mood_board"] == "h3", rep["seg_leader"]
+    assert rep["none_docs"] == 1 and rep["none_share"] > 0     # "none" tracked
+    assert "Split" in rep["headline"]                          # split, not a single winner
+    audit = build_audit_table(rep, df[df["is_relevant"]])
+    assert audit and all(r["cross_source_ok"] for r in audit)  # every claim clears >=2 sources
+    assert all(r["verdict"] == "" for r in audit)              # verdict pending
+    d = discard_pile(df, rep, df[df["is_relevant"]])
+    assert d["not_relevant"]["count"] == 1 and d["none_hypothesis"]["count"] == 1
     print("selftest OK")
 
 
+# ---------------------------------------------------------------- main
 def main() -> None:
-    ap = argparse.ArgumentParser(description="Cluster + score -> opportunities.csv + findings.md")
+    ap = argparse.ArgumentParser(description="Dual-hypothesis analysis -> data.json + audit table")
     ap.add_argument("-i", "--input", default="classified_data.csv")
-    ap.add_argument("-o", "--opps", default="opportunities.csv")
-    ap.add_argument("--findings", default="findings.md")
-    ap.add_argument("--embedder", choices=["tfidf", "st"], default="tfidf",
-                    help="tfidf (lean, default) or st (sentence-transformers MiniLM)")
+    ap.add_argument("--data", default="data.json")
     ap.add_argument("--selftest", action="store_true")
     args = ap.parse_args()
 
@@ -397,17 +378,27 @@ def main() -> None:
         _selftest()
         return
 
-    df = pd.read_csv(args.input, dtype=str).fillna("")
-    df["is_relevant"] = df["is_relevant"].str.lower().isin({"true", "1", "yes"})
-    df["is_myntra_specific"] = df["is_myntra_specific"].str.lower().isin({"true", "1", "yes"})
-    print(f"Loaded {len(df)} rows; {int(df['is_relevant'].sum())} relevant.", file=sys.stderr)
+    df = load(args.input)
+    rel = df[df["is_relevant"]].copy()
+    print(f"Loaded {len(df)} rows; {len(rel)} relevant.", file=sys.stderr)
 
-    opp, stats = analyze(df, args.embedder)
-    drop_cols = [c for c in opp.columns if c.startswith("_")]
-    opp.drop(columns=drop_cols).to_csv(args.opps, index=False, encoding="utf-8")
-    write_findings(opp, stats, args.findings)
-    print(f"Wrote {args.opps} ({len(opp)} opportunities) and {args.findings}.")
-    print(f"KILL-SWITCH price share: {stats['price_share']*100:.1f}%")
+    rep = analyze(df)
+    audit = build_audit_table(rep, rel)
+    discard = discard_pile(df, rep, rel)
+    rep["audit_table"] = audit
+    rep["discard_pile"] = discard
+    rep["index"] = build_index(rel)
+
+    import os
+    os.makedirs(os.path.dirname(args.data) or ".", exist_ok=True)
+    with open(args.data, "w", encoding="utf-8") as f:
+        json.dump(rep, f, ensure_ascii=False)
+    write_audit(audit, "audit_table.csv", "audit_table.md")
+    write_holdout(rel)
+    write_findings(rep, audit, discard)
+    print(f"Wrote {args.data} ({len(rep['index'])} indexed), audit_table.* ({len(audit)} claims), "
+          f"holdout_sample.csv, findings.md")
+    print(f"HEADLINE: {rep['headline']}")
 
 
 if __name__ == "__main__":

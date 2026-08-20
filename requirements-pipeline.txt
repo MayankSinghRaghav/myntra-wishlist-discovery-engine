@@ -1,10 +1,7 @@
-# Pipeline deps — needed to RE-RUN collect/classify/analyze locally.
-# NOT installed on Streamlit Cloud (the app doesn't need them).
-google-play-scraper>=1.2.7
-youtube-comment-downloader>=0.1.76
-praw>=7.7                    # optional: Reddit (needs a free key)
-google-generativeai>=0.8    # classify.py
-scikit-learn>=1.3           # analyze.py sub-theme clustering
-numpy>=1.26
-pandas>=2.0
-# sentence-transformers>=2.2  # optional: analyze.py --embedder st (pulls torch)
+# Pipeline deps — needed to RE-RUN collect / classify / analyze locally.
+# The deployed site is static (index.html + app.js + data.json) and needs NONE of these.
+google-play-scraper>=1.2.7   # collect.py — Google Play reviews (keyless)
+youtube-comment-downloader>=0.1.76  # collect.py — YouTube comments (keyless)
+praw>=7.7                    # collect.py — Reddit (needs free REDDIT_CLIENT_ID/SECRET)
+google-generativeai>=0.8    # classify.py — Gemini dual-hypothesis coding
+pandas>=2.0                 # analyze.py — shares + per-segment matrix
