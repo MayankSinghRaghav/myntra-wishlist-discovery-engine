@@ -1,105 +1,119 @@
-# Pre-registered hypotheses — Myntra Wishlist→Purchase Discovery Engine
+# Pre-Registered Hypotheses — Myntra Wishlist → Purchase
 
-**Committed before any dual-hypothesis classification was run against user data.**
-The authoritative timestamp is this file's first git commit. Nothing in the classification
-or analysis pipeline is permitted to run against the corpus until this file is committed.
+**Status: 🔒 FROZEN / COMMITTED — 2026-08-20 07:20 IST (Asia/Calcutta).**
+Drafted 2026-08-20 06:52 IST. Amended 2026-08-20 07:20 IST (added H2-vs-H3 discrimination
+protocol). Locked at three hypotheses. Price/value kept on watchlist (see note), not split out.
 
-**Why this exists:** the previous engine clustered themes, ranked them into a single
-"opportunity score", picked a winner, and primed every downstream source to confirm it. This
-version pre-commits *what would count as evidence for and against each hypothesis, and what
-result would reject it*, so a hypothesis can actually die. Reporting is per-hypothesis and
-per-segment — there is no single ranked winner.
+This file was committed **before the discovery engine ran and before any interview was coded.**
+Any change from here is a logged amendment with its own timestamp — never a silent edit.
 
----
+## Provenance (stated honestly for the audit trail)
+Mayank reviewed all three hypotheses and drove the sharpest revision himself — flagging H2/H3
+separability, which became the discrimination protocol below. The pre-data prior recorded next was
+proposed by Claude with reasoning and adopted by Mayank on delegation, not independently generated.
+Recorded truthfully rather than dressed up as an independent prior. Mayank may overwrite the prior
+any time before data lands.
 
-## The three competing hypotheses
+## Pre-data prior (recorded 2026-08-20 07:20 IST, before any engine or interview data)
+- **Largest raw share of non-conversion → H3** — much of the 88–90% was likely never purchase intent.
+- **Largest actionable leak → H1** — among real-intent saves, fit/size/quality uncertainty dominates
+  and is the lever Myntra can actually move.
+- **Smallest → H2** — intent decay is real but likely the most over-told story; "the occasion passed"
+  often masks H1 or H3.
+- Provenance: Claude-proposed, Mayank-adopted on delegation. Overwritable pre-data.
+- This prior earns no protection — it is subject to every kill-condition below like any other claim.
 
-Each explains why a user **saves** (wishlists) a fashion item on Myntra but does **not buy** it.
-They are competing, not nested: a document is coded independently on each, and may support
-several, one, or **none**. "None" is a real outcome and its share is reported.
+## Metric under study
+**W2P-30** = share of wishlist-adds that convert to purchase of that item (or close substitute)
+within 30 days. Working baseline estimate ~10–12%.
 
-### H1 — Uncertainty blocks conversion
-The user *wants* the item but cannot resolve a doubt, so the decision stalls.
-Doubt is about: **fit, size, quality/material, authenticity, styling/occasion match, or need
-for social validation.**
-- **Counts as evidence (present=true):** the text voices an *unresolved* doubt tied to a
-  saved/considered item ("not sure of the size", "will it look good on me", "is this original").
-- **Does NOT count:** post-purchase complaints (returns, damaged on arrival), pure app bugs,
-  price-only objections.
-- **Would disconfirm H1:** doubts cluster at the *post-purchase* stage (they're returns/quality
-  problems, not decision-stage blocks), OR the dominant segment is one with no purchase intent
-  (then H3, not H1, explains the non-purchase).
-
-### H2 — Relevance decays
-Nothing is "unresolved" — the window simply closed. The user moved on.
-Causes: **occasion passed, trend moved, forgot the item, or already bought it elsewhere.**
-- **Counts as evidence (present=true):** the text signals lapsed relevance ("forgot it was
-  there", "already got one", "don't need it now", "was for Diwali").
-- **Does NOT count:** an active, still-wanted item held up by a doubt (that's H1).
-- **Would disconfirm H2:** decay language is rare across all segments, OR items are still
-  actively wanted (contradicts "window closed").
-
-### H3 — Wishlist ≠ purchase intent
-The save was never a buy signal. The wishlist is used as something else.
-Sub-types: **mood-board / inspiration, price-watch, catalogue-as-Pinterest browsing,
-size-unavailable holding.**
-- **Counts as evidence (present=true):** the text shows the save is not intended as a purchase
-  ("just saving for inspo", "waiting for a sale", "adding to see later", "saved till my size is back").
-- **Does NOT count:** a genuine intent to buy that is merely deferred by a doubt (H1) or by
-  decay (H2).
-- **Would disconfirm H3:** the corpus shows saved items are overwhelmingly intended purchases
-  deferred by resolvable blocks (then the lever is H1/H2, not "re-teach what a wishlist is").
+## Falsifiability rule
+Each hypothesis states, up front, the evidence pattern that would KILL it. If the interviews +
+engine corpus produce the kill-pattern, we reject it on a slide. We are **not** looking to confirm
+all three — we expect at least one to die.
 
 ---
 
-## Closed taxonomy — `intent_segment` (the segmentation dimension)
+## H1 — Purchase-time uncertainty stalls still-wanted items
+**Statement:** A meaningful share of wishlisted items are still wanted and still relevant at day 30,
+but do not convert because the shopper cannot resolve fit / size / quality / return-safety
+uncertainty at the moment of commitment.
+**Funnel stage attacked:** Stage 3 (commit intent).
+**Mechanism:** No low-risk way to "try before trust" → the decision is deferred indefinitely.
+**Would CONFIRM:** Respondents describe a specific item they still want but haven't bought, and the
+blocker they name is fit/size/"will it look like the photo"/return hassle — not price, not "changed my mind."
+**Would KILL it (reject if):** When shown their own un-bought wishlist items, respondents rarely cite
+fit/quality/return doubt; the dominant reasons are "no longer needed," "found it elsewhere," or "was
+never really going to buy it." I.e. uncertainty is a minor stage-3 leak, not the main one.
+**Prior (Claude's, non-binding):** Medium-high. ~50% of Myntra revenue already runs through the
+size/fit algorithm — circumstantial evidence fit-uncertainty is load-bearing, but that same fact
+could mean fit is already solved at purchase and irrelevant at wishlist. Genuinely open.
 
-Segmentation of *how the user is using the save* is coded **before** any conclusion on blockers,
-and every hypothesis result is reported **per segment, never averaged across segments**. Closed
-set — the model may not invent a segment:
+## H2 — Relevance decays inside the 30-day window
+**Statement:** Intent was real at save-time, but the item becomes irrelevant before re-consideration
+because the triggering context expires — the occasion passes, the season turns, the need is met
+elsewhere, or the look dates.
+**Funnel stage attacked:** Stages 1–2 (re-exposure, re-consideration).
+**Mechanism:** Wishlist captures a moment of intent but is not re-surfaced while the intent is still
+live; by the time (if) the user returns, the reason to buy is gone.
+**Would CONFIRM:** Respondents describe saving for a specific occasion/season/need, and the item dying
+because "that event was over" / "it's not the season anymore" / "I'd already sorted it."
+**Would KILL it (reject if):** Un-bought items are mostly evergreen (basics, staples with no
+time-bound trigger) and respondents still didn't buy them — meaning decay isn't the story; something
+timeless is still blocking them (points back to H1 or H3).
+**Prior:** Medium. Fashion is seasonal and occasion-driven, so plausible — but risks being a just-so
+story if respondents can't point to a concrete expired trigger.
 
-| segment | meaning |
-|---|---|
-| `deferred_purchase` | genuine intent to buy, deferred (the H1/H2 battleground) |
-| `mood_board` | inspiration / aesthetic collection, no buy intent |
-| `price_watch` | saved to buy *if* it gets cheaper |
-| `catalogue_browse` | using the wishlist as a browsing / "see later" catalogue |
-| `size_unavailable_hold` | wants it, holding because the size is out of stock |
-| `unclear` | intent not determinable from the text |
+## H3 — Wishlist add ≠ purchase intent
+**Statement:** A large share of wishlist-adds are not deferred purchases at all — they are
+organizational, aspirational, comparison, or "bookmark to look at" acts. Low W2P-30 is partly correct
+behavior of a mixed-intent tool, not a conversion failure.
+**Funnel stage attacked:** Stage 0 (the denominator itself).
+**Mechanism:** The wishlist is overloaded — one button serves "buy later," "compare these," "aspire to
+this," "save the brand," "remember this style." Treating all adds as intended purchases inflates the denominator.
+**Would CONFIRM:** When walked through their wishlist, respondents themselves classify many items as
+"never planned to buy that" / "just saving for inspo" / "comparing options, picked one."
+**Would KILL it (reject if):** Respondents report they did intend to buy most of what they saved and
+are frustrated they didn't — i.e. the intent was real and the failure is downstream (H1/H2), not a
+denominator artifact.
+**Prior:** Medium-high, and the most consequential if true — because it would mean the right fix is
+segmenting intent at save-time, not nudging harder. Also the most dangerous to assume, because it can
+excuse away a real conversion problem. Needs the sharpest evidence.
 
-## Closed taxonomy — `topic` (what the doubt/subject is about)
+## Interaction / competition note
+These are built to **compete, not stack.** They attack different funnel stages and imply different
+solutions (H1 → safe-commit mechanism; H2 → intent-timed re-surfacing; H3 → intent segmentation at
+save-time). If two are true, the deck must say which stage leaks most, not claim all three. If the
+evidence is mushy, we say so — we do not smooth it into one confident narrative (attempt-2 failure mode).
 
-One label per document, closed set (reused from the validated barrier taxonomy):
+## Pre-registered discrimination protocol: H2 vs H3 (added per Mayank, 2026-08-20)
+H2 and H3 produce near-identical interview language ("I didn't buy it") and must be actively told
+apart, or their kill-conditions don't fire. The whole boundary is one question — **was there genuine
+purchase intent at the moment of saving?** Intent existed at save then died → H2; intent never existed
+at save → H3.
 
-`fit_uncertainty, size_uncertainty, quality_uncertainty, authenticity_trust,
-style_occasion_match, choice_overload, info_insufficient, conflicting_reviews,
-social_validation_need, needs_external_comparison, price_value, delivery_returns,
-stockout, forgetting, none, other`
+**The trap we pre-commit to avoid:** asking a user "did you intend to buy it?" *after* they didn't buy
+is contaminated by post-hoc rationalization. Pure self-reported intent systematically over-credits H3
+and under-credits H2. We name this now so we never quietly lean on that contaminated question.
 
----
+Discriminate by triangulating three signals, never one:
+1. **Episodic reconstruction, not intent-labeling.** Replay the save moment concretely — "what were
+   you doing when you saved this, why that item, what did you picture doing next?"
+2. **Item taxonomy (objective-ish).** Tag each un-bought item as occasion/season-tied vs evergreen.
+   Occasion-tied + occasion-passed supports H2; evergreen + "just saving for inspo" supports H3.
+3. **Save-time behavioral signal from the engine.** High-consideration behavior at save (checked size
+   chart / read reviews / compared) = real intent (weakens H3); reflexive one-tap save = weak intent (supports H3).
 
-## Coding rules (binding on the classifier)
+**Decision rule (pre-registered):** classify each un-bought item by the **majority of the three
+signals**, not self-report alone. Where the three disagree, log "ambiguous" and report it as such. A
+large ambiguous bucket is itself a finding.
 
-1. **Independent coding.** H1, H2, H3 are judged separately. Multiple / one / none are all valid.
-2. **Verbatim span required.** Each `present=true` must carry a `span` copied verbatim from the
-   source text. Any span later found not to be a substring of its source is blanked and the claim
-   is dropped from reporting.
-3. **Closed sets only.** Out-of-taxonomy values are coerced to the default; no free-form themes.
-4. **Cross-source rule.** A theme/claim is reported as real only with **≥2 independent sources**.
-   Single-source themes go to the discard pile.
-5. **"None" is tracked.** Documents supporting no hypothesis are counted and reported, not hidden.
+## Engagement & decision log
+- 2026-08-20 — Mayank: reviewed all three; endorsed competing-causal framing and discrimination-not-
+  validation goal. Primary scrutiny = H2 vs H3 separability. No hypothesis rejected.
+- 2026-08-20 07:20 IST — **FROZEN.** Pre-data prior recorded; H4 not split (price/value stays on
+  watchlist inside H1's commit stage — add later as a timestamped amendment if it surfaces strongly);
+  freeze authorised by Mayank. Segment left open until early engine output.
 
-## Pre-registered decision rules (how a hypothesis is rejected — set before the run)
-
-- A hypothesis is **SUPPORTED overall** only if its evidence share ≥ **15%** of relevant
-  documents **and** it clears the ≥2-source rule.
-- A hypothesis is **REJECTED** if its overall evidence share < **8%** **and** it does not lead
-  in any single intent-segment. (It could not muster even a within-segment plurality.)
-- Between 8% and 15%, or leads only within one narrow segment → **PARTIAL / segment-specific**;
-  reported as such, not promoted to a headline.
-- The **headline finding is the segment split** (which hypothesis leads in which segment), not a
-  single winner. If H1/H2/H3 shares are within 5 points of each other overall with no segment
-  separation, the honest finding is "no dominant mechanism" — that is a valid, reportable result.
-
-_Thresholds are complaint-share of a skewed corpus, not user prevalence. Every wishlist→purchase
-link here is a hypothesis for primary research to confirm or kill (see the audit table)._
+## Amendment log (append-only)
+- (none yet — first post-freeze change gets a dated entry here)
