@@ -1,0 +1,27 @@
+# Myntra YouTube sources for comment ingest (collect.py --youtube).
+# One watch URL per line; lines starting with # are ignored.
+# Curated 2026-08-20 across three angles so comments aren't all "everything's great":
+# hauls/try-on (fit/size/quality doubt, wishlist), quality/return complaints
+# (disconfirming signal + delivery_returns), and sale/wishlist behavior (price-watch).
+# collect.py skips any URL with comments disabled or removed — a few duds are fine.
+
+# --- hauls & try-on reviews (H1 fit/size/quality, H3 wishlist) ---
+https://www.youtube.com/watch?v=snWk50T7TqI
+https://www.youtube.com/watch?v=fAeJgzF_428
+https://www.youtube.com/watch?v=RUVaZhNowoU
+https://www.youtube.com/watch?v=LP1wd6_FFnQ
+https://www.youtube.com/watch?v=7DbaLbPNakM
+https://www.youtube.com/watch?v=awEvmlBkXww
+https://www.youtube.com/watch?v=JOceU4QQkYo
+https://www.youtube.com/watch?v=KJ8Z-wOiIdQ
+
+# --- quality / return / "worth it?" complaints (H1 quality, delivery_returns) ---
+https://www.youtube.com/watch?v=7u7xlh0bAkA
+https://www.youtube.com/watch?v=PE-BLjciXnA
+https://www.youtube.com/watch?v=7D4YwRLHriQ
+https://www.youtube.com/watch?v=T-6ItUJ8zb8
+
+# --- sale / wishlist behavior (H3 price_watch, H2 relevance decay) ---
+https://www.youtube.com/watch?v=Re4mpDKUncA
+https://www.youtube.com/watch?v=ZbH9r7QK7No
+https://www.youtube.com/watch?v=zksO6UFO7Mg

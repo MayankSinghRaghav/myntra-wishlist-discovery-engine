@@ -109,32 +109,32 @@ def collect_youtube(urls: list[str], per_video: int, lang: str = "en") -> list[d
     dl = YoutubeCommentDownloader()
     out = []
     for url in urls:
-        try:
-            gen = dl.get_comments_from_url(url, sort_by=SORT_BY_POPULAR)
-        except Exception as e:  # noqa: BLE001  -- one bad URL shouldn't kill the run
-            print(f"  youtube skip {url}: {e}", file=sys.stderr)
-            continue
         n = 0
-        for c in gen:
-            if n >= per_video:
-                break
-            txt = clean_text(c.get("text"))
-            if not txt:
-                continue
-            out.append({
-                "doc_id": f"yt_{c.get('cid', '')}",
-                "source": "youtube",
-                "platform": "youtube_comment",
-                "url": url,
-                "collected_at": now_iso(),
-                "posted_date": "",  # library gives relative time ("2 years ago"); drop it
-                "raw_text": txt,
-                "language": lang,
-                "rating": "",
-                "extra": json.dumps({"votes": c.get("votes", "")}, ensure_ascii=False),
-                "dedup_hash": dedup_hash(txt),
-            })
-            n += 1
+        try:  # guard the WHOLE pull incl. iteration — one blocked/empty video must not kill the run
+            gen = dl.get_comments_from_url(url, sort_by=SORT_BY_POPULAR)
+            for c in gen:
+                if n >= per_video:
+                    break
+                txt = clean_text(c.get("text"))
+                if not txt:
+                    continue
+                out.append({
+                    "doc_id": f"yt_{c.get('cid', '')}",
+                    "source": "youtube",
+                    "platform": "youtube_comment",
+                    "url": url,
+                    "collected_at": now_iso(),
+                    "posted_date": "",  # library gives relative time ("2 years ago"); drop it
+                    "raw_text": txt,
+                    "language": lang,
+                    "rating": "",
+                    "extra": json.dumps({"votes": c.get("votes", "")}, ensure_ascii=False),
+                    "dedup_hash": dedup_hash(txt),
+                })
+                n += 1
+        except Exception as e:  # noqa: BLE001  -- one bad URL shouldn't kill the run
+            print(f"  youtube skip {url} (+{n} kept): {e}", file=sys.stderr)
+            continue
         print(f"  youtube {url}: +{n}", file=sys.stderr)
     return out
 
