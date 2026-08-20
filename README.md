@@ -65,6 +65,7 @@ python collect.py --play-count 2500 --also-relevant 500 -o raw_data.csv
 python collect.py --youtube videos.txt --per-video 300 -o raw_data.csv   # 1 Myntra-haul URL per line
 export REDDIT_CLIENT_ID=... REDDIT_CLIENT_SECRET=...
 python collect.py --reddit -o raw_data.csv
+# If YouTube/Reddit block your IP (429/403), collect them on Apify's cloud instead (see below).
 
 # 2. Classify (batched, resumable — safe to Ctrl-C / re-run; free-tier flash-lite)
 export GEMINI_API_KEY=your_key      # PowerShell: $env:GEMINI_API_KEY="your_key"
@@ -82,6 +83,28 @@ python test_pipeline.py
 ```
 
 Each script has `--selftest` and `-h`.
+
+### Cloud collection fallback (Apify) — when YouTube/Reddit block your IP
+
+`collect.py` works for Play everywhere, but YouTube and Reddit rate-limit/block some networks
+(429 / 403). In that case run the scrape on Apify's cloud (its own IPs + residential proxy) and
+normalize the output into the same schema with `ingest_apify.py`:
+
+- YouTube: [`streamers/youtube-comments-scraper`](https://apify.com/streamers/youtube-comments-scraper)
+  — input `{startUrls:[{url}], maxComments, sortCommentsBy}`.
+- Reddit: [`trudax/reddit-scraper-lite`](https://apify.com/trudax/reddit-scraper-lite)
+  — input `{searches:[...], maxItems, sort}`, residential proxy.
+
+Download each run's dataset (`https://api.apify.com/v2/datasets/<id>/items?format=json&clean=true`,
+public — no token) to `yt.json` / `reddit.json`, then merge (author/username are dropped; Reddit
+HTML + "submitted by" boilerplate stripped):
+
+```bash
+python ingest_apify.py --play raw_data.csv --youtube yt.json --reddit reddit.json -o raw_data.csv
+```
+
+`ingest_apify.py` reuses `collect.py`'s schema, dedup, and hashing, so the corpus is identical in
+shape and privacy regardless of which path produced it.
 
 ## Deploy (Vercel — static, keyless, free)
 
