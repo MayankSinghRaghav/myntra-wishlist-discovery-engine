@@ -70,6 +70,13 @@ STANCE DISCIPLINE (this is the part graders will audit hardest — get it right)
   Do not manufacture a contradicts claim just because a review is positive.
 - "supports" needs the SAME bar: the quote must show the mechanism actually operating (real
   hesitation/doubt/decay/non-intent stated or clearly implied), not just adjacent sentiment.
+- GENERIC POSITIVE REVIEWS ARE NOT H1 EVIDENCE, EITHER DIRECTION. A review that is simply happy
+  ("great shopping experience, easy to use, wide variety, amazing deals", "I've used Myntra for
+  years, always good", "quality was outstanding, highly recommend") names NO doubt and NO decision
+  moment — it is is_relevant=false (or hypothesis="other" if it's on-topic but decision-free), never
+  H1/supports and never H1/contradicts. Do not let the word "quality"/"good"/"experience" alone
+  trigger a hypothesis mapping — the text must describe an actual UNCERTAINTY, its resolution, or
+  its absence, not just sentiment.
 
 Return a JSON array, EXACTLY one object per input text, same order. Each object:
 - is_relevant (bool): true if it concerns a fashion saving/wishlist/consideration/buy-or-not decision

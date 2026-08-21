@@ -145,15 +145,17 @@ def _segment(members: list[dict]) -> dict | None:
 
 # ---------------------------------------------------------------- build register
 def build_register(claim_rows: list[dict]) -> list[dict]:
-    # cluster key = (hypothesis, stance, theme); a theme group is one claim, except "misc"
-    # which is sub-clustered by difflib so keyword-less paraphrases still merge.
+    # cluster key = (hypothesis, stance, theme). Theme narrows the pool (so unrelated topics
+    # never merge); difflib similarity within that pool decides which claims are truly the SAME
+    # atomic statement. A shared theme keyword (e.g. "quality") does NOT make two claims the same
+    # claim — "quality was outstanding" and "quality was extremely poor" must stay separate entries.
     by_group: dict[tuple, list[dict]] = {}
     for r in claim_rows:
         by_group.setdefault((r["hypothesis"], r["stance"], theme_of(r)), []).append(r)
 
     entries = []
     for (hyp, stance, theme), rows in by_group.items():
-        groups = cluster(rows) if theme == "misc" else [rows]
+        groups = cluster(rows)
         for members in groups:
             srcs = sorted({m["source"] for m in members})
             freq = len(members)
@@ -289,11 +291,17 @@ def _fake() -> list[dict]:
                 "claim_text": ct, "hypothesis": hyp, "stance": stance, "quote": quote,
                 "category": cat, "method": "gemini"}
     return [
-        row("d1", "reddit", "saved it but still unsure of the size", "h1", "supports", "unsure of the size", "ethnic"),
-        row("d2", "google_play", "not sure about size so did not buy", "h1", "supports", "not sure about size", "ethnic"),
+        row("d1", "reddit", "not sure about the size", "h1", "supports", "not sure about the size", "ethnic"),
+        row("d2", "google_play", "not sure about the size either", "h1", "supports", "not sure about the size", "ethnic"),
+        # same theme (quality) + same (hypothesis, stance) as d7, but NOT the same claim —
+        # regression case for the bug where a whole theme bucket was merged into one entry
         row("d3", "youtube", "i always end up buying what i wishlist", "h3", "contradicts", "always buying what i wishlist"),
         row("d4", "reddit", "just saving these for inspiration", "h3", "supports", "saving these for inspiration"),
         row("d5", "reddit", "claim with no quote", "h2", "supports", ""),   # unverified -> discard
+        row("d7", "google_play", "quality was extremely poor", "h1", "supports", "quality was extremely poor", "ethnic"),
+        row("d8", "google_play", "quality was outstanding and product matched the photos exactly",
+            "h1", "supports", "quality was outstanding", "ethnic"),   # mislabelled by the classifier,
+        # but must NOT merge with d7 just because both are H1/supports/theme=quality
         {"claim_id": "d6#0", "doc_id": "d6", "source": "reddit", "platform": "reddit_post",
          "url": "u", "posted_date": "", "is_relevant": "False", "claim_text": "", "hypothesis": "",
          "stance": "", "quote": "", "category": "", "method": "gemini"},   # not-relevant marker
@@ -305,9 +313,14 @@ def _selftest() -> None:
     claim_rows = [r for r in rows if r["claim_text"]]
     shippable = [r for r in claim_rows if r["quote"].strip()]
     reg = build_register(shippable)
-    # the two "unsure of size" H1/supports claims merge into ONE entry across 2 platforms
-    h1 = [e for e in reg if e["hypothesis_map"] == "H1"]
-    assert len(h1) == 1 and h1[0]["n_independent_srcs"] == 2 and not h1[0]["thin_evidence"], h1
+    # the two near-identical "not sure about the size" H1/supports claims merge into ONE entry
+    fit = [e for e in reg if e["hypothesis_map"] == "H1" and e["theme"] == "fit_size"]
+    assert len(fit) == 1 and fit[0]["n_independent_srcs"] == 2 and not fit[0]["thin_evidence"], fit
+    # d7 (poor quality) and d8 (outstanding quality) share theme+hypothesis+stance but are NOT
+    # the same claim -> must stay as SEPARATE entries, not collapsed into one blob (regression)
+    quality = [e for e in reg if e["hypothesis_map"] == "H1" and e["theme"] == "quality"]
+    assert len(quality) == 2, quality
+    assert all(e["corpus_frequency"] == 1 for e in quality), quality
     # supports and contradicts on H3 stay SEPARATE entries (never collapsed)
     h3 = sorted([e for e in reg if e["hypothesis_map"] == "H3"], key=lambda e: e["stance"])
     assert [e["stance"] for e in h3] == ["contradicts", "supports"], h3
@@ -315,8 +328,8 @@ def _selftest() -> None:
     assert all(e["source_quotes"] for e in reg)                # every shipped claim traceable
     lean = hypothesis_lean(claim_rows)
     assert lean["h3"]["contradicts"] == 1 and lean["h3"]["supports"] == 1
-    man = corpus_manifest(rows)   # d1-d5 relevant (d5 relevant but its claim is unverified), d6 not
-    assert man["n_documents"] == 6 and man["n_relevant"] == 5 and man["n_independent_platforms"] == 3
+    man = corpus_manifest(rows)   # d1-d5,d7,d8 relevant (d5 relevant but its claim is unverified), d6 not
+    assert man["n_documents"] == 8 and man["n_relevant"] == 7 and man["n_independent_platforms"] == 3
     disc = discard_pile(rows, claim_rows, reg)
     assert disc["unverified_claims"]["count"] == 1 and disc["not_relevant"]["count"] == 1
     print("selftest OK")
