@@ -4,13 +4,35 @@
 
 const HYP = ["h1", "h2", "h3", "other"];
 const HYPNAME = {h1: "H1 uncertainty", h2: "H2 decay", h3: "H3 ≠ intent", other: "other"};
-const STOP = new Set("the a an and or of to for in on is it my me you we they this that with was but not are be at as if so did do you're your i".split(" "));
+// A proper English function-word stoplist (interrogatives/pronouns/prepositions/auxiliaries) plus
+// generic review fillers. The corpus is domain-specific (all Myntra fashion), so an off-topic query
+// ("how to cook pasta", "best football player ever") reduces to nothing once function words are
+// stripped and remaining terms are checked against the corpus. (IDF/rarity fails here — domain words
+// like "size"/"return" are the MOST common — so function-word stripping is the robust signal.)
+const STOP = new Set((
+  "about above after again against all and any are aren cannot could couldn did didn does doesn doing "
+  + "don down during each few for from further had hadn has hasn have haven having her here hers herself "
+  + "him himself his how into isn its itself let more most mustn myself nor not off once only other ought "
+  + "our ours ourselves out over own same shan she should shouldn some such than that the their theirs "
+  + "them themselves then there these they this those through too under until very was wasn were weren "
+  + "what when where which while who whom why will with won would wouldn you your yours yourself yourselves "
+  + "best good great nice love loved like ever today app myntra product item thing things time day people "
+  + "make made use using buy bought order get got just really also one two lot bit want need got"
+).split(/\s+/));
 const pct = (n, d) => d ? Math.round(n / d * 100) + "%" : "0%";
 const esc = s => String(s == null ? "" : s).replace(/[&<>"]/g, c => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;"}[c]));
 
-let DATA = null;
-fetch("data.json").then(r => r.json()).then(d => { DATA = d; render(d); })
+let DATA = null, DF = null;   // DF: term -> number of index docs containing it
+fetch("data.json").then(r => r.json()).then(d => { DATA = d; buildDF(d); render(d); })
   .catch(() => document.getElementById("stats").textContent = "Could not load data.json — run analyze.py.");
+
+function buildDF(d) {
+  DF = Object.create(null);
+  for (const doc of (d.index || [])) {
+    const seen = new Set((doc.text + " " + doc.claim + " " + doc.quote).toLowerCase().match(/[a-z0-9]+/g) || []);
+    for (const t of seen) DF[t] = (DF[t] || 0) + 1;
+  }
+}
 
 function badge(cls, txt) { return `<span class="badge ${cls}">${esc(txt)}</span>`; }
 
@@ -91,16 +113,23 @@ function tokens(s) {
 function ask() {
   const q = document.getElementById("q").value.trim();
   const out = document.getElementById("ans");
-  const qt = tokens(q);
-  if (!qt.length) { out.innerHTML = `<div class="refuse">Type a question with a few real words.</div>`; return; }
+  const raw = tokens(q);
+  // keep only query terms that actually exist in the corpus (df >= 2) -- an off-topic query's
+  // topic words ("weather", "football") are absent, so nothing meaningful survives -> refuse.
+  const qt = raw.filter(t => (DF[t] || 0) >= 2);
+  if (!qt.length) {
+    out.innerHTML = `<div class="refuse"><b>Refused — off-corpus.</b> None of those words carry a topic this corpus of Myntra wishlist evidence can speak to.</div>`; return;
+  }
   const MIN_DOCS = 3;
+  // query terms are already filtered to real in-corpus domain words, so a single-term match is
+  // meaningful; rank by how many query terms a doc matches. Corroboration guard is MIN_DOCS + >=2 platforms.
   const scored = (DATA.index || []).map(doc => {
     const hay = (doc.text + " " + doc.claim + " " + doc.quote).toLowerCase();
     return {doc, score: qt.filter(t => hay.includes(t)).length};
-  }).filter(x => x.score > 0).sort((a, b) => b.score - a.score);
+  }).filter(x => x.score >= 1).sort((a, b) => b.score - a.score);
   const plats = new Set(scored.map(x => x.doc.platform));
   if (scored.length < MIN_DOCS) {
-    out.innerHTML = `<div class="refuse"><b>Refused — thin evidence.</b> Only ${scored.length} document(s) mention that (need ≥${MIN_DOCS}); nothing verbatim to ground an answer on.</div>`; return;
+    out.innerHTML = `<div class="refuse"><b>Refused — thin evidence.</b> Only ${scored.length} document(s) meaningfully match that (need ≥${MIN_DOCS}); nothing verbatim to ground an answer on.</div>`; return;
   }
   if (plats.size < 2) {
     out.innerHTML = `<div class="refuse"><b>Refused — cross-source rule.</b> Matching evidence is from only ${plats.size} platform(s). A claim needs ≥2 independent platforms.</div>`; return;
