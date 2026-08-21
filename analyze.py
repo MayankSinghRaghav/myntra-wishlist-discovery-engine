@@ -26,7 +26,9 @@ from difflib import SequenceMatcher
 
 from classify import HYPOTHESES  # closed set, single source of truth
 
-SIM = 0.60          # difflib similarity to merge two atomic claims into one register entry
+SIM = 0.55          # difflib similarity to merge two atomic claims into one register entry
+# (0.60 missed a confirmed real cross-platform paraphrase at 0.579 while the "must not merge"
+# opposite-polarity regression case sits at 0.386 -- 0.55 keeps a safety margin on both sides)
 MAX_QUOTES = 5      # source_quotes per register entry
 HYP_LABEL = {"h1": "H1", "h2": "H2", "h3": "H3", "other": "other"}
 HYP_NAME = {

@@ -1,0 +1,30 @@
+{
+ "n_documents": 4756,
+ "n_relevant": 249,
+ "platforms": [
+  "google_play",
+  "reddit",
+  "youtube"
+ ],
+ "n_independent_platforms": 3,
+ "counts_by_platform": {
+  "google_play": 4256,
+  "youtube": 328,
+  "reddit": 172
+ },
+ "date_range": {
+  "earliest": "2018-10-12",
+  "latest": "2026-08-18"
+ },
+ "not_ingested": [
+  "apple_app_store",
+  "x_twitter",
+  "quora"
+ ],
+ "n_claims_extracted": 259,
+ "n_claims_traceable": 236,
+ "n_register_entries": 224,
+ "model_mix": {
+  "gemini": 4756
+ }
+}
