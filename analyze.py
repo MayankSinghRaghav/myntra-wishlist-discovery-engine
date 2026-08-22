@@ -200,33 +200,14 @@ INTERVIEW = {
            "detail": "respondents classified many saves as compare / inspiration / bookmark — not deferred buys"},
 }
 
-# post-purchase grievance vs pre-purchase uncertainty — a heuristic split of H1's supporting claims
-_POST = _re.compile(r"\b(return|refund|exchang|deliver|pickup|received|wrong (product|item)|replac|"
-                    r"reject|damag|fraud|cancel|after (buying|purchase)|arrived)\b", _re.I)
-_PRE = _re.compile(r"\b(not sure|unsure|size chart|will it fit|true to size|doubt|hesitat|look like|"
-                   r"before (buy|order|purchas)|photo|might not fit|which size)\b", _re.I)
+# pre-purchase uncertainty vs post-purchase grievance — the H1 re-cut lives in reclassify_h1.py
+# (a standalone, reproducible pass). analyze.py delegates to it so there is ONE classifier.
+import reclassify_h1  # noqa: E402
 
 
 def h1_split_of(entry: dict) -> str:
-    hay = entry["claim_text"] + " " + " ".join(q["verbatim"] for q in entry.get("source_quotes", []))
-    post = entry.get("theme") == "returns_delivery" or bool(_POST.search(hay))
-    pre = entry.get("theme") == "fit_size" or bool(_PRE.search(hay))
-    if post and not pre:
-        return "post_purchase"
-    if pre and not post:
-        return "pre_purchase"
-    return "ambiguous"
-
-
-def compute_h1_split(register: list[dict]) -> dict:
-    h1sup = [e for e in register if e["hypothesis_map"] == "H1" and e["stance"] == "supports"]
-    b = {"pre_purchase": 0, "post_purchase": 0, "ambiguous": 0}
-    for e in h1sup:
-        b[h1_split_of(e)] += 1
-    return {"total": len(h1sup), **b,
-            "method": "Heuristic split by claim theme + keywords on each claim's text/quotes. The "
-                      "boundary is genuinely fuzzy — a return-safety fear can be pre-purchase — so the "
-                      "ambiguous bucket is real uncertainty, not noise, and this split is indicative, not exact."}
+    """Bucket used to choose interview-audit targets; delegates to the single classifier."""
+    return reclassify_h1.classify_h1(reclassify_h1._text_of(entry))
 
 
 # audit plan: apply the interview verdicts to the highest-signal claims each verdict bears on.
@@ -417,7 +398,7 @@ def _selftest() -> None:
     disc = discard_pile(rows, claim_rows, reg)
     assert disc["unverified_claims"]["count"] == 1 and disc["not_relevant"]["count"] == 1
     # interview overlay: audit fills verdicts on top claims; coverage computed from the register
-    split = compute_h1_split(reg)
+    split = reclassify_h1.apply(reg)
     assert split["total"] == sum(1 for e in reg if e["hypothesis_map"] == "H1" and e["stance"] == "supports")
     aud = apply_interview_audit(reg)
     assert aud["n_audited"] == sum(1 for e in reg if e["audit_verdict"]) and aud["n_audited"] <= aud["n_total"]
@@ -444,9 +425,10 @@ def main() -> None:
 
     register = build_register(shippable)
     audit = apply_interview_audit(register)   # primary-research overlay: fills audit_verdict on top claims
-    h1_split = compute_h1_split(register)
     manifest = corpus_manifest(rows)
     lean = hypothesis_lean(claim_rows)
+    h1_split = reclassify_h1.apply(register, net_lean=lean["h1"]["net"])  # writes h1_bucket + returns split
+    manifest["h1_support_split"] = h1_split
     cats = category_signal(claim_rows)
     discard = discard_pile(rows, claim_rows, register)
 

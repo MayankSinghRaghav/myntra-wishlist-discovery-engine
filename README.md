@@ -86,6 +86,7 @@ python classify.py                  # full corpus -> claims.csv
 
 # 3. Rank register + manifest + early signal
 python analyze.py                   # -> claims_register.json, corpus_manifest.json, early_signal.md, data.json
+python reclassify_h1.py             # re-cut H1-supporting claims: pre-purchase vs post-purchase grievance
 python build_static.py              # inline dashboard.js + data.json -> self-contained index.html
 
 # 4. Dashboard (static — just serve the folder)
@@ -94,6 +95,16 @@ python -m http.server 8099          # open http://localhost:8099
 # offline sanity checks (no network, no key)
 python test_pipeline.py
 ```
+
+### H1 re-cut (`reclassify_h1.py`) — power the interview finding with data
+The interviews rejected H1 as the primary blocker (n=6); this pass powers that with the corpus.
+It classifies every **H1-supporting** claim in `claims_register.json`, from its verbatim quotes,
+as **pre-purchase uncertainty** (fit/size/quality doubt before buying a saved item) vs
+**post-purchase grievance** (bad return/delivery after a purchase); ambiguous → `unclear`, never
+forced. It writes an `h1_bucket` field on each such claim, and the split into `corpus_manifest.json`
+(`h1_support_split`) and `data.json` (`h1_split`). Deterministic keyword rules, no API key,
+fully reproducible. Current result: **125 H1-supporting claims → 8 pre-purchase / 77 post-purchase /
+40 unclear** — i.e. the corpus's H1 lean is largely post-purchase grievance, not saved-item hesitation.
 
 Each script has `--selftest` and `-h`. All prompts are in the source: the extraction prompt is
 `PROMPT` in [`classify.py`](classify.py); the hypotheses + kill-conditions are in [`hypotheses.md`](hypotheses.md).

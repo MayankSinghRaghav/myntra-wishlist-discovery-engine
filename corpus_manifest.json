@@ -21,6 +21,15 @@
   "x_twitter",
   "quora"
  ],
+ "h1_support_split": {
+  "total": 125,
+  "pre_purchase": 8,
+  "post_purchase": 77,
+  "unclear": 40,
+  "method": "Deterministic keyword classification of each H1-supporting claim's verbatim quotes into pre-purchase uncertainty vs post-purchase grievance. A claim with both signals, or neither, is 'unclear' — never forced. Fully reproducible (reclassify_h1.py, no API key).",
+  "net_lean": 118,
+  "summary": "Of 125 H1-supporting claims, post-purchase grievance is the larger bucket — 77 (62%) vs 8 pre-purchase (6%), 40 unclear. Computed from the verbatim quotes, this means the corpus's H1 lean (net +118) is largely NOT about pre-purchase hesitation on saved items; it is dominated by complaints about returns/delivery on completed purchases. That is the data-scale echo of the 6 interviews: H1 is not the primary saved-item→purchase blocker."
+ },
  "n_claims_extracted": 259,
  "n_claims_traceable": 236,
  "n_register_entries": 224,

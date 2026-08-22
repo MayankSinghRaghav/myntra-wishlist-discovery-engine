@@ -146,7 +146,7 @@ function renderReconcile(d) {
     <ul>
       <li>H1's lean is <b>inflated by post-purchase return grievances</b> — of its ${sp.total || 0} supporting claims, only
         <b>${sp.pre_purchase || 0}</b> read as pre-purchase uncertainty vs <b>${sp.post_purchase || 0}</b> post-purchase grievance
-        (${sp.ambiguous || 0} ambiguous). Complaint-skewed reviews shout about returns, not about the save→buy decision.</li>
+        (${sp.unclear != null ? sp.unclear : (sp.ambiguous || 0)} unclear). Complaint-skewed reviews shout about returns, not about the save→buy decision.</li>
       <li>And it <b>cuts both ways</b> — the corpus also carries claims that argue <i>against</i> H1${cq ? `, e.g. ${cq}` : ""}.</li>
       <li>Public text can only <b>propose</b> hypotheses. Only <b>primary research on users' own saved items</b> can settle which
         blocker actually decides a non-purchase — and it did: H3 strong, H2 weak, <b>H1 rejected</b>.</li>
@@ -156,17 +156,21 @@ function renderReconcile(d) {
 
 function renderH1Split(s) {
   if (!s || !s.total) return `<p class="muted">No H1 supporting claims to split.</p>`;
-  const max = Math.max(s.pre_purchase, s.post_purchase, s.ambiguous, 1);
+  const unclear = s.unclear != null ? s.unclear : s.ambiguous || 0;   // back-compat
+  const max = Math.max(s.pre_purchase, s.post_purchase, unclear, 1);
   const row = (lab, v, cls) =>
     `<div class="bar-row"><div class="bar-lab">${lab}<em>n=${v}</em></div>
      <div class="bar-track"><div class="bar-fill ${cls}" style="width:${Math.max(3, v / max * 100)}%"></div></div>
      <div class="bar-val">${pct(v, s.total)}</div></div>`;
-  return `<div class="bars">
+  const head = s.net_lean != null
+    ? `<p class="small muted">H1 net corpus lean <b>+${s.net_lean}</b> → re-cut of its ${s.total} supporting claims:</p>` : "";
+  return head + `<div class="bars">
       ${row("Pre-purchase uncertainty", s.pre_purchase, "elig")}
       ${row("Post-purchase grievance", s.post_purchase, "inelig")}
-      ${row("Ambiguous", s.ambiguous, "amb")}
+      ${row("Unclear", unclear, "amb")}
     </div>
-    <p class="small muted" style="margin-top:8px">${esc(s.method)}</p>`;
+    ${s.summary ? `<div class="insight" style="margin-top:12px">${esc(s.summary)}</div>` : ""}
+    <p class="small muted" style="margin-top:8px">${esc(s.method || "")}</p>`;
 }
 
 function verdictCell(e) {

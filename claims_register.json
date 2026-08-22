@@ -63,7 +63,8 @@
   "thin_evidence": false,
   "corpus_frequency": 2,
   "audit_verdict": "partly invented",
-  "audit_note": "Real complaint, but a POST-purchase grievance — not the wishlist→buy blocker the corpus implied (H1 rejected as primary, 0/6)."
+  "audit_note": "Real complaint, but a POST-purchase grievance — not the wishlist→buy blocker the corpus implied (H1 rejected as primary, 0/6).",
+  "h1_bucket": "post_purchase"
  },
  {
   "claim_id": "C003",
@@ -93,8 +94,9 @@
   "confidence_basis": "2 passage(s) across 1 independent platform(s)",
   "thin_evidence": true,
   "corpus_frequency": 2,
-  "audit_verdict": "partly invented",
-  "audit_note": "Real complaint, but a POST-purchase grievance — not the wishlist→buy blocker the corpus implied (H1 rejected as primary, 0/6)."
+  "audit_verdict": "",
+  "audit_note": "",
+  "h1_bucket": "unclear"
  },
  {
   "claim_id": "C004",
@@ -154,7 +156,8 @@
   "thin_evidence": true,
   "corpus_frequency": 2,
   "audit_verdict": "partly invented",
-  "audit_note": "Fit/quality doubt is real, but 0/6 interviews named it the deciding reason a saved item went unbought."
+  "audit_note": "Real complaint, but a POST-purchase grievance — not the wishlist→buy blocker the corpus implied (H1 rejected as primary, 0/6).",
+  "h1_bucket": "post_purchase"
  },
  {
   "claim_id": "C006",
@@ -184,8 +187,9 @@
   "confidence_basis": "2 passage(s) across 1 independent platform(s)",
   "thin_evidence": true,
   "corpus_frequency": 2,
-  "audit_verdict": "",
-  "audit_note": ""
+  "audit_verdict": "partly invented",
+  "audit_note": "Real complaint, but a POST-purchase grievance — not the wishlist→buy blocker the corpus implied (H1 rejected as primary, 0/6).",
+  "h1_bucket": "post_purchase"
  },
  {
   "claim_id": "C007",
@@ -213,8 +217,9 @@
   "confidence_basis": "2 passage(s) across 1 independent platform(s)",
   "thin_evidence": true,
   "corpus_frequency": 2,
-  "audit_verdict": "partly invented",
-  "audit_note": "Fit/quality doubt is real, but 0/6 interviews named it the deciding reason a saved item went unbought."
+  "audit_verdict": "",
+  "audit_note": "",
+  "h1_bucket": "unclear"
  },
  {
   "claim_id": "C008",
@@ -245,7 +250,8 @@
   "thin_evidence": true,
   "corpus_frequency": 2,
   "audit_verdict": "",
-  "audit_note": ""
+  "audit_note": "",
+  "h1_bucket": "post_purchase"
  },
  {
   "claim_id": "C009",
@@ -276,7 +282,8 @@
   "thin_evidence": true,
   "corpus_frequency": 2,
   "audit_verdict": "",
-  "audit_note": ""
+  "audit_note": "",
+  "h1_bucket": "unclear"
  },
  {
   "claim_id": "C010",
@@ -571,8 +578,9 @@
   "confidence_basis": "1 passage(s) across 1 independent platform(s)",
   "thin_evidence": true,
   "corpus_frequency": 1,
-  "audit_verdict": "partly invented",
-  "audit_note": "Real complaint, but a POST-purchase grievance — not the wishlist→buy blocker the corpus implied (H1 rejected as primary, 0/6)."
+  "audit_verdict": "",
+  "audit_note": "",
+  "h1_bucket": "post_purchase"
  },
  {
   "claim_id": "C022",
@@ -595,7 +603,8 @@
   "thin_evidence": true,
   "corpus_frequency": 1,
   "audit_verdict": "",
-  "audit_note": ""
+  "audit_note": "",
+  "h1_bucket": "post_purchase"
  },
  {
   "claim_id": "C023",
@@ -618,7 +627,8 @@
   "thin_evidence": true,
   "corpus_frequency": 1,
   "audit_verdict": "",
-  "audit_note": ""
+  "audit_note": "",
+  "h1_bucket": "post_purchase"
  },
  {
   "claim_id": "C024",
@@ -641,7 +651,8 @@
   "thin_evidence": true,
   "corpus_frequency": 1,
   "audit_verdict": "",
-  "audit_note": ""
+  "audit_note": "",
+  "h1_bucket": "post_purchase"
  },
  {
   "claim_id": "C025",
@@ -664,7 +675,8 @@
   "thin_evidence": true,
   "corpus_frequency": 1,
   "audit_verdict": "",
-  "audit_note": ""
+  "audit_note": "",
+  "h1_bucket": "post_purchase"
  },
  {
   "claim_id": "C026",
@@ -689,7 +701,8 @@
   "thin_evidence": true,
   "corpus_frequency": 1,
   "audit_verdict": "",
-  "audit_note": ""
+  "audit_note": "",
+  "h1_bucket": "post_purchase"
  },
  {
   "claim_id": "C027",
@@ -712,7 +725,8 @@
   "thin_evidence": true,
   "corpus_frequency": 1,
   "audit_verdict": "",
-  "audit_note": ""
+  "audit_note": "",
+  "h1_bucket": "post_purchase"
  },
  {
   "claim_id": "C028",
@@ -737,7 +751,8 @@
   "thin_evidence": true,
   "corpus_frequency": 1,
   "audit_verdict": "",
-  "audit_note": ""
+  "audit_note": "",
+  "h1_bucket": "post_purchase"
  },
  {
   "claim_id": "C029",
@@ -760,7 +775,8 @@
   "thin_evidence": true,
   "corpus_frequency": 1,
   "audit_verdict": "",
-  "audit_note": ""
+  "audit_note": "",
+  "h1_bucket": "unclear"
  },
  {
   "claim_id": "C030",
@@ -783,7 +799,8 @@
   "thin_evidence": true,
   "corpus_frequency": 1,
   "audit_verdict": "",
-  "audit_note": ""
+  "audit_note": "",
+  "h1_bucket": "post_purchase"
  },
  {
   "claim_id": "C031",
@@ -806,7 +823,8 @@
   "thin_evidence": true,
   "corpus_frequency": 1,
   "audit_verdict": "",
-  "audit_note": ""
+  "audit_note": "",
+  "h1_bucket": "post_purchase"
  },
  {
   "claim_id": "C032",
@@ -831,7 +849,8 @@
   "thin_evidence": true,
   "corpus_frequency": 1,
   "audit_verdict": "",
-  "audit_note": ""
+  "audit_note": "",
+  "h1_bucket": "post_purchase"
  },
  {
   "claim_id": "C033",
@@ -854,7 +873,8 @@
   "thin_evidence": true,
   "corpus_frequency": 1,
   "audit_verdict": "",
-  "audit_note": ""
+  "audit_note": "",
+  "h1_bucket": "post_purchase"
  },
  {
   "claim_id": "C034",
@@ -877,7 +897,8 @@
   "thin_evidence": true,
   "corpus_frequency": 1,
   "audit_verdict": "",
-  "audit_note": ""
+  "audit_note": "",
+  "h1_bucket": "unclear"
  },
  {
   "claim_id": "C035",
@@ -900,7 +921,8 @@
   "thin_evidence": true,
   "corpus_frequency": 1,
   "audit_verdict": "",
-  "audit_note": ""
+  "audit_note": "",
+  "h1_bucket": "post_purchase"
  },
  {
   "claim_id": "C036",
@@ -923,7 +945,8 @@
   "thin_evidence": true,
   "corpus_frequency": 1,
   "audit_verdict": "",
-  "audit_note": ""
+  "audit_note": "",
+  "h1_bucket": "post_purchase"
  },
  {
   "claim_id": "C037",
@@ -948,7 +971,8 @@
   "thin_evidence": true,
   "corpus_frequency": 1,
   "audit_verdict": "",
-  "audit_note": ""
+  "audit_note": "",
+  "h1_bucket": "post_purchase"
  },
  {
   "claim_id": "C038",
@@ -971,7 +995,8 @@
   "thin_evidence": true,
   "corpus_frequency": 1,
   "audit_verdict": "",
-  "audit_note": ""
+  "audit_note": "",
+  "h1_bucket": "post_purchase"
  },
  {
   "claim_id": "C039",
@@ -994,7 +1019,8 @@
   "thin_evidence": true,
   "corpus_frequency": 1,
   "audit_verdict": "",
-  "audit_note": ""
+  "audit_note": "",
+  "h1_bucket": "post_purchase"
  },
  {
   "claim_id": "C040",
@@ -1017,7 +1043,8 @@
   "thin_evidence": true,
   "corpus_frequency": 1,
   "audit_verdict": "",
-  "audit_note": ""
+  "audit_note": "",
+  "h1_bucket": "unclear"
  },
  {
   "claim_id": "C041",
@@ -1040,7 +1067,8 @@
   "thin_evidence": true,
   "corpus_frequency": 1,
   "audit_verdict": "",
-  "audit_note": ""
+  "audit_note": "",
+  "h1_bucket": "post_purchase"
  },
  {
   "claim_id": "C042",
@@ -1065,7 +1093,8 @@
   "thin_evidence": true,
   "corpus_frequency": 1,
   "audit_verdict": "",
-  "audit_note": ""
+  "audit_note": "",
+  "h1_bucket": "post_purchase"
  },
  {
   "claim_id": "C043",
@@ -1088,7 +1117,8 @@
   "thin_evidence": true,
   "corpus_frequency": 1,
   "audit_verdict": "",
-  "audit_note": ""
+  "audit_note": "",
+  "h1_bucket": "post_purchase"
  },
  {
   "claim_id": "C044",
@@ -1111,7 +1141,8 @@
   "thin_evidence": true,
   "corpus_frequency": 1,
   "audit_verdict": "",
-  "audit_note": ""
+  "audit_note": "",
+  "h1_bucket": "post_purchase"
  },
  {
   "claim_id": "C045",
@@ -1134,7 +1165,8 @@
   "thin_evidence": true,
   "corpus_frequency": 1,
   "audit_verdict": "",
-  "audit_note": ""
+  "audit_note": "",
+  "h1_bucket": "post_purchase"
  },
  {
   "claim_id": "C046",
@@ -1157,7 +1189,8 @@
   "thin_evidence": true,
   "corpus_frequency": 1,
   "audit_verdict": "",
-  "audit_note": ""
+  "audit_note": "",
+  "h1_bucket": "post_purchase"
  },
  {
   "claim_id": "C047",
@@ -1180,7 +1213,8 @@
   "thin_evidence": true,
   "corpus_frequency": 1,
   "audit_verdict": "",
-  "audit_note": ""
+  "audit_note": "",
+  "h1_bucket": "post_purchase"
  },
  {
   "claim_id": "C048",
@@ -1205,7 +1239,8 @@
   "thin_evidence": true,
   "corpus_frequency": 1,
   "audit_verdict": "",
-  "audit_note": ""
+  "audit_note": "",
+  "h1_bucket": "unclear"
  },
  {
   "claim_id": "C049",
@@ -1322,7 +1357,8 @@
   "thin_evidence": true,
   "corpus_frequency": 1,
   "audit_verdict": "",
-  "audit_note": ""
+  "audit_note": "",
+  "h1_bucket": "post_purchase"
  },
  {
   "claim_id": "C054",
@@ -1345,7 +1381,8 @@
   "thin_evidence": true,
   "corpus_frequency": 1,
   "audit_verdict": "",
-  "audit_note": ""
+  "audit_note": "",
+  "h1_bucket": "unclear"
  },
  {
   "claim_id": "C055",
@@ -1369,8 +1406,9 @@
   "confidence_basis": "1 passage(s) across 1 independent platform(s)",
   "thin_evidence": true,
   "corpus_frequency": 1,
-  "audit_verdict": "",
-  "audit_note": ""
+  "audit_verdict": "partly invented",
+  "audit_note": "Fit/quality doubt is real, but 0/6 interviews named it the deciding reason a saved item went unbought.",
+  "h1_bucket": "pre_purchase"
  },
  {
   "claim_id": "C056",
@@ -1393,7 +1431,8 @@
   "thin_evidence": true,
   "corpus_frequency": 1,
   "audit_verdict": "",
-  "audit_note": ""
+  "audit_note": "",
+  "h1_bucket": "unclear"
  },
  {
   "claim_id": "C057",
@@ -1418,7 +1457,8 @@
   "thin_evidence": true,
   "corpus_frequency": 1,
   "audit_verdict": "",
-  "audit_note": ""
+  "audit_note": "",
+  "h1_bucket": "unclear"
  },
  {
   "claim_id": "C058",
@@ -1441,7 +1481,8 @@
   "thin_evidence": true,
   "corpus_frequency": 1,
   "audit_verdict": "",
-  "audit_note": ""
+  "audit_note": "",
+  "h1_bucket": "post_purchase"
  },
  {
   "claim_id": "C059",
@@ -1466,7 +1507,8 @@
   "thin_evidence": true,
   "corpus_frequency": 1,
   "audit_verdict": "",
-  "audit_note": ""
+  "audit_note": "",
+  "h1_bucket": "post_purchase"
  },
  {
   "claim_id": "C060",
@@ -1491,7 +1533,8 @@
   "thin_evidence": true,
   "corpus_frequency": 1,
   "audit_verdict": "",
-  "audit_note": ""
+  "audit_note": "",
+  "h1_bucket": "post_purchase"
  },
  {
   "claim_id": "C061",
@@ -1513,8 +1556,9 @@
   "confidence_basis": "1 passage(s) across 1 independent platform(s)",
   "thin_evidence": true,
   "corpus_frequency": 1,
-  "audit_verdict": "",
-  "audit_note": ""
+  "audit_verdict": "partly invented",
+  "audit_note": "Fit/quality doubt is real, but 0/6 interviews named it the deciding reason a saved item went unbought.",
+  "h1_bucket": "pre_purchase"
  },
  {
   "claim_id": "C062",
@@ -1537,7 +1581,8 @@
   "thin_evidence": true,
   "corpus_frequency": 1,
   "audit_verdict": "",
-  "audit_note": ""
+  "audit_note": "",
+  "h1_bucket": "post_purchase"
  },
  {
   "claim_id": "C063",
@@ -1560,7 +1605,8 @@
   "thin_evidence": true,
   "corpus_frequency": 1,
   "audit_verdict": "",
-  "audit_note": ""
+  "audit_note": "",
+  "h1_bucket": "post_purchase"
  },
  {
   "claim_id": "C064",
@@ -1583,7 +1629,8 @@
   "thin_evidence": true,
   "corpus_frequency": 1,
   "audit_verdict": "",
-  "audit_note": ""
+  "audit_note": "",
+  "h1_bucket": "pre_purchase"
  },
  {
   "claim_id": "C065",
@@ -1608,7 +1655,8 @@
   "thin_evidence": true,
   "corpus_frequency": 1,
   "audit_verdict": "",
-  "audit_note": ""
+  "audit_note": "",
+  "h1_bucket": "unclear"
  },
  {
   "claim_id": "C066",
@@ -1631,7 +1679,8 @@
   "thin_evidence": true,
   "corpus_frequency": 1,
   "audit_verdict": "",
-  "audit_note": ""
+  "audit_note": "",
+  "h1_bucket": "post_purchase"
  },
  {
   "claim_id": "C067",
@@ -1654,7 +1703,8 @@
   "thin_evidence": true,
   "corpus_frequency": 1,
   "audit_verdict": "",
-  "audit_note": ""
+  "audit_note": "",
+  "h1_bucket": "unclear"
  },
  {
   "claim_id": "C068",
@@ -1679,7 +1729,8 @@
   "thin_evidence": true,
   "corpus_frequency": 1,
   "audit_verdict": "",
-  "audit_note": ""
+  "audit_note": "",
+  "h1_bucket": "post_purchase"
  },
  {
   "claim_id": "C069",
@@ -1702,7 +1753,8 @@
   "thin_evidence": true,
   "corpus_frequency": 1,
   "audit_verdict": "",
-  "audit_note": ""
+  "audit_note": "",
+  "h1_bucket": "post_purchase"
  },
  {
   "claim_id": "C070",
@@ -1727,7 +1779,8 @@
   "thin_evidence": true,
   "corpus_frequency": 1,
   "audit_verdict": "",
-  "audit_note": ""
+  "audit_note": "",
+  "h1_bucket": "post_purchase"
  },
  {
   "claim_id": "C071",
@@ -1750,7 +1803,8 @@
   "thin_evidence": true,
   "corpus_frequency": 1,
   "audit_verdict": "",
-  "audit_note": ""
+  "audit_note": "",
+  "h1_bucket": "post_purchase"
  },
  {
   "claim_id": "C072",
@@ -1773,7 +1827,8 @@
   "thin_evidence": true,
   "corpus_frequency": 1,
   "audit_verdict": "",
-  "audit_note": ""
+  "audit_note": "",
+  "h1_bucket": "post_purchase"
  },
  {
   "claim_id": "C073",
@@ -1798,7 +1853,8 @@
   "thin_evidence": true,
   "corpus_frequency": 1,
   "audit_verdict": "",
-  "audit_note": ""
+  "audit_note": "",
+  "h1_bucket": "post_purchase"
  },
  {
   "claim_id": "C074",
@@ -1823,7 +1879,8 @@
   "thin_evidence": true,
   "corpus_frequency": 1,
   "audit_verdict": "",
-  "audit_note": ""
+  "audit_note": "",
+  "h1_bucket": "post_purchase"
  },
  {
   "claim_id": "C075",
@@ -1848,7 +1905,8 @@
   "thin_evidence": true,
   "corpus_frequency": 1,
   "audit_verdict": "",
-  "audit_note": ""
+  "audit_note": "",
+  "h1_bucket": "unclear"
  },
  {
   "claim_id": "C076",
@@ -1871,7 +1929,8 @@
   "thin_evidence": true,
   "corpus_frequency": 1,
   "audit_verdict": "",
-  "audit_note": ""
+  "audit_note": "",
+  "h1_bucket": "post_purchase"
  },
  {
   "claim_id": "C077",
@@ -1896,7 +1955,8 @@
   "thin_evidence": true,
   "corpus_frequency": 1,
   "audit_verdict": "",
-  "audit_note": ""
+  "audit_note": "",
+  "h1_bucket": "post_purchase"
  },
  {
   "claim_id": "C078",
@@ -1919,7 +1979,8 @@
   "thin_evidence": true,
   "corpus_frequency": 1,
   "audit_verdict": "",
-  "audit_note": ""
+  "audit_note": "",
+  "h1_bucket": "post_purchase"
  },
  {
   "claim_id": "C079",
@@ -1942,7 +2003,8 @@
   "thin_evidence": true,
   "corpus_frequency": 1,
   "audit_verdict": "",
-  "audit_note": ""
+  "audit_note": "",
+  "h1_bucket": "post_purchase"
  },
  {
   "claim_id": "C080",
@@ -1965,7 +2027,8 @@
   "thin_evidence": true,
   "corpus_frequency": 1,
   "audit_verdict": "",
-  "audit_note": ""
+  "audit_note": "",
+  "h1_bucket": "post_purchase"
  },
  {
   "claim_id": "C081",
@@ -1990,7 +2053,8 @@
   "thin_evidence": true,
   "corpus_frequency": 1,
   "audit_verdict": "",
-  "audit_note": ""
+  "audit_note": "",
+  "h1_bucket": "post_purchase"
  },
  {
   "claim_id": "C082",
@@ -2013,7 +2077,8 @@
   "thin_evidence": true,
   "corpus_frequency": 1,
   "audit_verdict": "",
-  "audit_note": ""
+  "audit_note": "",
+  "h1_bucket": "unclear"
  },
  {
   "claim_id": "C083",
@@ -2036,7 +2101,8 @@
   "thin_evidence": true,
   "corpus_frequency": 1,
   "audit_verdict": "",
-  "audit_note": ""
+  "audit_note": "",
+  "h1_bucket": "post_purchase"
  },
  {
   "claim_id": "C084",
@@ -2059,7 +2125,8 @@
   "thin_evidence": true,
   "corpus_frequency": 1,
   "audit_verdict": "",
-  "audit_note": ""
+  "audit_note": "",
+  "h1_bucket": "post_purchase"
  },
  {
   "claim_id": "C085",
@@ -2084,7 +2151,8 @@
   "thin_evidence": true,
   "corpus_frequency": 1,
   "audit_verdict": "",
-  "audit_note": ""
+  "audit_note": "",
+  "h1_bucket": "post_purchase"
  },
  {
   "claim_id": "C086",
@@ -2109,7 +2177,8 @@
   "thin_evidence": true,
   "corpus_frequency": 1,
   "audit_verdict": "",
-  "audit_note": ""
+  "audit_note": "",
+  "h1_bucket": "post_purchase"
  },
  {
   "claim_id": "C087",
@@ -2132,7 +2201,8 @@
   "thin_evidence": true,
   "corpus_frequency": 1,
   "audit_verdict": "",
-  "audit_note": ""
+  "audit_note": "",
+  "h1_bucket": "post_purchase"
  },
  {
   "claim_id": "C088",
@@ -2155,7 +2225,8 @@
   "thin_evidence": true,
   "corpus_frequency": 1,
   "audit_verdict": "",
-  "audit_note": ""
+  "audit_note": "",
+  "h1_bucket": "post_purchase"
  },
  {
   "claim_id": "C089",
@@ -2178,7 +2249,8 @@
   "thin_evidence": true,
   "corpus_frequency": 1,
   "audit_verdict": "",
-  "audit_note": ""
+  "audit_note": "",
+  "h1_bucket": "post_purchase"
  },
  {
   "claim_id": "C090",
@@ -2203,7 +2275,8 @@
   "thin_evidence": true,
   "corpus_frequency": 1,
   "audit_verdict": "",
-  "audit_note": ""
+  "audit_note": "",
+  "h1_bucket": "post_purchase"
  },
  {
   "claim_id": "C091",
@@ -2226,7 +2299,8 @@
   "thin_evidence": true,
   "corpus_frequency": 1,
   "audit_verdict": "",
-  "audit_note": ""
+  "audit_note": "",
+  "h1_bucket": "post_purchase"
  },
  {
   "claim_id": "C092",
@@ -2249,7 +2323,8 @@
   "thin_evidence": true,
   "corpus_frequency": 1,
   "audit_verdict": "",
-  "audit_note": ""
+  "audit_note": "",
+  "h1_bucket": "post_purchase"
  },
  {
   "claim_id": "C093",
@@ -2272,7 +2347,8 @@
   "thin_evidence": true,
   "corpus_frequency": 1,
   "audit_verdict": "",
-  "audit_note": ""
+  "audit_note": "",
+  "h1_bucket": "unclear"
  },
  {
   "claim_id": "C094",
@@ -2297,7 +2373,8 @@
   "thin_evidence": true,
   "corpus_frequency": 1,
   "audit_verdict": "",
-  "audit_note": ""
+  "audit_note": "",
+  "h1_bucket": "post_purchase"
  },
  {
   "claim_id": "C095",
@@ -2320,7 +2397,8 @@
   "thin_evidence": true,
   "corpus_frequency": 1,
   "audit_verdict": "",
-  "audit_note": ""
+  "audit_note": "",
+  "h1_bucket": "post_purchase"
  },
  {
   "claim_id": "C096",
@@ -2343,7 +2421,8 @@
   "thin_evidence": true,
   "corpus_frequency": 1,
   "audit_verdict": "",
-  "audit_note": ""
+  "audit_note": "",
+  "h1_bucket": "post_purchase"
  },
  {
   "claim_id": "C097",
@@ -2366,7 +2445,8 @@
   "thin_evidence": true,
   "corpus_frequency": 1,
   "audit_verdict": "",
-  "audit_note": ""
+  "audit_note": "",
+  "h1_bucket": "unclear"
  },
  {
   "claim_id": "C098",
@@ -2389,7 +2469,8 @@
   "thin_evidence": true,
   "corpus_frequency": 1,
   "audit_verdict": "",
-  "audit_note": ""
+  "audit_note": "",
+  "h1_bucket": "pre_purchase"
  },
  {
   "claim_id": "C099",
@@ -2414,7 +2495,8 @@
   "thin_evidence": true,
   "corpus_frequency": 1,
   "audit_verdict": "",
-  "audit_note": ""
+  "audit_note": "",
+  "h1_bucket": "post_purchase"
  },
  {
   "claim_id": "C100",
@@ -2439,7 +2521,8 @@
   "thin_evidence": true,
   "corpus_frequency": 1,
   "audit_verdict": "",
-  "audit_note": ""
+  "audit_note": "",
+  "h1_bucket": "unclear"
  },
  {
   "claim_id": "C101",
@@ -2464,7 +2547,8 @@
   "thin_evidence": true,
   "corpus_frequency": 1,
   "audit_verdict": "",
-  "audit_note": ""
+  "audit_note": "",
+  "h1_bucket": "pre_purchase"
  },
  {
   "claim_id": "C102",
@@ -2487,7 +2571,8 @@
   "thin_evidence": true,
   "corpus_frequency": 1,
   "audit_verdict": "",
-  "audit_note": ""
+  "audit_note": "",
+  "h1_bucket": "unclear"
  },
  {
   "claim_id": "C103",
@@ -2510,7 +2595,8 @@
   "thin_evidence": true,
   "corpus_frequency": 1,
   "audit_verdict": "",
-  "audit_note": ""
+  "audit_note": "",
+  "h1_bucket": "unclear"
  },
  {
   "claim_id": "C104",
@@ -2533,7 +2619,8 @@
   "thin_evidence": true,
   "corpus_frequency": 1,
   "audit_verdict": "",
-  "audit_note": ""
+  "audit_note": "",
+  "h1_bucket": "unclear"
  },
  {
   "claim_id": "C105",
@@ -2556,7 +2643,8 @@
   "thin_evidence": true,
   "corpus_frequency": 1,
   "audit_verdict": "",
-  "audit_note": ""
+  "audit_note": "",
+  "h1_bucket": "unclear"
  },
  {
   "claim_id": "C106",
@@ -2579,7 +2667,8 @@
   "thin_evidence": true,
   "corpus_frequency": 1,
   "audit_verdict": "",
-  "audit_note": ""
+  "audit_note": "",
+  "h1_bucket": "unclear"
  },
  {
   "claim_id": "C107",
@@ -2604,7 +2693,8 @@
   "thin_evidence": true,
   "corpus_frequency": 1,
   "audit_verdict": "",
-  "audit_note": ""
+  "audit_note": "",
+  "h1_bucket": "unclear"
  },
  {
   "claim_id": "C108",
@@ -2629,7 +2719,8 @@
   "thin_evidence": true,
   "corpus_frequency": 1,
   "audit_verdict": "",
-  "audit_note": ""
+  "audit_note": "",
+  "h1_bucket": "pre_purchase"
  },
  {
   "claim_id": "C109",
@@ -2652,7 +2743,8 @@
   "thin_evidence": true,
   "corpus_frequency": 1,
   "audit_verdict": "",
-  "audit_note": ""
+  "audit_note": "",
+  "h1_bucket": "unclear"
  },
  {
   "claim_id": "C110",
@@ -2675,7 +2767,8 @@
   "thin_evidence": true,
   "corpus_frequency": 1,
   "audit_verdict": "",
-  "audit_note": ""
+  "audit_note": "",
+  "h1_bucket": "post_purchase"
  },
  {
   "claim_id": "C111",
@@ -2700,7 +2793,8 @@
   "thin_evidence": true,
   "corpus_frequency": 1,
   "audit_verdict": "",
-  "audit_note": ""
+  "audit_note": "",
+  "h1_bucket": "post_purchase"
  },
  {
   "claim_id": "C112",
@@ -2723,7 +2817,8 @@
   "thin_evidence": true,
   "corpus_frequency": 1,
   "audit_verdict": "",
-  "audit_note": ""
+  "audit_note": "",
+  "h1_bucket": "pre_purchase"
  },
  {
   "claim_id": "C113",
@@ -2746,7 +2841,8 @@
   "thin_evidence": true,
   "corpus_frequency": 1,
   "audit_verdict": "",
-  "audit_note": ""
+  "audit_note": "",
+  "h1_bucket": "unclear"
  },
  {
   "claim_id": "C114",
@@ -2769,7 +2865,8 @@
   "thin_evidence": true,
   "corpus_frequency": 1,
   "audit_verdict": "",
-  "audit_note": ""
+  "audit_note": "",
+  "h1_bucket": "unclear"
  },
  {
   "claim_id": "C115",
@@ -2792,7 +2889,8 @@
   "thin_evidence": true,
   "corpus_frequency": 1,
   "audit_verdict": "",
-  "audit_note": ""
+  "audit_note": "",
+  "h1_bucket": "post_purchase"
  },
  {
   "claim_id": "C116",
@@ -2815,7 +2913,8 @@
   "thin_evidence": true,
   "corpus_frequency": 1,
   "audit_verdict": "",
-  "audit_note": ""
+  "audit_note": "",
+  "h1_bucket": "unclear"
  },
  {
   "claim_id": "C117",
@@ -2838,7 +2937,8 @@
   "thin_evidence": true,
   "corpus_frequency": 1,
   "audit_verdict": "",
-  "audit_note": ""
+  "audit_note": "",
+  "h1_bucket": "post_purchase"
  },
  {
   "claim_id": "C118",
@@ -2861,7 +2961,8 @@
   "thin_evidence": true,
   "corpus_frequency": 1,
   "audit_verdict": "",
-  "audit_note": ""
+  "audit_note": "",
+  "h1_bucket": "unclear"
  },
  {
   "claim_id": "C119",
@@ -2884,7 +2985,8 @@
   "thin_evidence": true,
   "corpus_frequency": 1,
   "audit_verdict": "",
-  "audit_note": ""
+  "audit_note": "",
+  "h1_bucket": "unclear"
  },
  {
   "claim_id": "C120",
@@ -2907,7 +3009,8 @@
   "thin_evidence": true,
   "corpus_frequency": 1,
   "audit_verdict": "",
-  "audit_note": ""
+  "audit_note": "",
+  "h1_bucket": "post_purchase"
  },
  {
   "claim_id": "C121",
@@ -2930,7 +3033,8 @@
   "thin_evidence": true,
   "corpus_frequency": 1,
   "audit_verdict": "",
-  "audit_note": ""
+  "audit_note": "",
+  "h1_bucket": "post_purchase"
  },
  {
   "claim_id": "C122",
@@ -2955,7 +3059,8 @@
   "thin_evidence": true,
   "corpus_frequency": 1,
   "audit_verdict": "",
-  "audit_note": ""
+  "audit_note": "",
+  "h1_bucket": "unclear"
  },
  {
   "claim_id": "C123",
@@ -2980,7 +3085,8 @@
   "thin_evidence": true,
   "corpus_frequency": 1,
   "audit_verdict": "",
-  "audit_note": ""
+  "audit_note": "",
+  "h1_bucket": "unclear"
  },
  {
   "claim_id": "C124",
@@ -3715,7 +3821,8 @@
   "thin_evidence": true,
   "corpus_frequency": 1,
   "audit_verdict": "",
-  "audit_note": ""
+  "audit_note": "",
+  "h1_bucket": "unclear"
  },
  {
   "claim_id": "C155",
@@ -3738,7 +3845,8 @@
   "thin_evidence": true,
   "corpus_frequency": 1,
   "audit_verdict": "",
-  "audit_note": ""
+  "audit_note": "",
+  "h1_bucket": "post_purchase"
  },
  {
   "claim_id": "C156",
@@ -3761,7 +3869,8 @@
   "thin_evidence": true,
   "corpus_frequency": 1,
   "audit_verdict": "",
-  "audit_note": ""
+  "audit_note": "",
+  "h1_bucket": "post_purchase"
  },
  {
   "claim_id": "C157",
@@ -3784,7 +3893,8 @@
   "thin_evidence": true,
   "corpus_frequency": 1,
   "audit_verdict": "",
-  "audit_note": ""
+  "audit_note": "",
+  "h1_bucket": "unclear"
  },
  {
   "claim_id": "C158",
@@ -3807,7 +3917,8 @@
   "thin_evidence": true,
   "corpus_frequency": 1,
   "audit_verdict": "",
-  "audit_note": ""
+  "audit_note": "",
+  "h1_bucket": "post_purchase"
  },
  {
   "claim_id": "C159",
@@ -3830,7 +3941,8 @@
   "thin_evidence": true,
   "corpus_frequency": 1,
   "audit_verdict": "",
-  "audit_note": ""
+  "audit_note": "",
+  "h1_bucket": "post_purchase"
  },
  {
   "claim_id": "C160",
@@ -3853,7 +3965,8 @@
   "thin_evidence": true,
   "corpus_frequency": 1,
   "audit_verdict": "",
-  "audit_note": ""
+  "audit_note": "",
+  "h1_bucket": "post_purchase"
  },
  {
   "claim_id": "C161",
@@ -3876,7 +3989,8 @@
   "thin_evidence": true,
   "corpus_frequency": 1,
   "audit_verdict": "",
-  "audit_note": ""
+  "audit_note": "",
+  "h1_bucket": "unclear"
  },
  {
   "claim_id": "C162",
@@ -3901,7 +4015,8 @@
   "thin_evidence": true,
   "corpus_frequency": 1,
   "audit_verdict": "",
-  "audit_note": ""
+  "audit_note": "",
+  "h1_bucket": "unclear"
  },
  {
   "claim_id": "C163",
@@ -3926,7 +4041,8 @@
   "thin_evidence": true,
   "corpus_frequency": 1,
   "audit_verdict": "",
-  "audit_note": ""
+  "audit_note": "",
+  "h1_bucket": "unclear"
  },
  {
   "claim_id": "C164",
@@ -3949,7 +4065,8 @@
   "thin_evidence": true,
   "corpus_frequency": 1,
   "audit_verdict": "",
-  "audit_note": ""
+  "audit_note": "",
+  "h1_bucket": "unclear"
  },
  {
   "claim_id": "C165",
@@ -3974,7 +4091,8 @@
   "thin_evidence": true,
   "corpus_frequency": 1,
   "audit_verdict": "",
-  "audit_note": ""
+  "audit_note": "",
+  "h1_bucket": "unclear"
  },
  {
   "claim_id": "C166",
@@ -3997,7 +4115,8 @@
   "thin_evidence": true,
   "corpus_frequency": 1,
   "audit_verdict": "",
-  "audit_note": ""
+  "audit_note": "",
+  "h1_bucket": "unclear"
  },
  {
   "claim_id": "C167",
@@ -4020,7 +4139,8 @@
   "thin_evidence": true,
   "corpus_frequency": 1,
   "audit_verdict": "",
-  "audit_note": ""
+  "audit_note": "",
+  "h1_bucket": "unclear"
  },
  {
   "claim_id": "C168",
@@ -4043,7 +4163,8 @@
   "thin_evidence": true,
   "corpus_frequency": 1,
   "audit_verdict": "",
-  "audit_note": ""
+  "audit_note": "",
+  "h1_bucket": "post_purchase"
  },
  {
   "claim_id": "C169",
@@ -4066,7 +4187,8 @@
   "thin_evidence": true,
   "corpus_frequency": 1,
   "audit_verdict": "",
-  "audit_note": ""
+  "audit_note": "",
+  "h1_bucket": "post_purchase"
  },
  {
   "claim_id": "C170",
@@ -4089,7 +4211,8 @@
   "thin_evidence": true,
   "corpus_frequency": 1,
   "audit_verdict": "",
-  "audit_note": ""
+  "audit_note": "",
+  "h1_bucket": "post_purchase"
  },
  {
   "claim_id": "C171",
@@ -4989,7 +5112,8 @@
   "thin_evidence": true,
   "corpus_frequency": 1,
   "audit_verdict": "",
-  "audit_note": ""
+  "audit_note": "",
+  "h1_bucket": "pre_purchase"
  },
  {
   "claim_id": "C209",
@@ -5012,7 +5136,8 @@
   "thin_evidence": true,
   "corpus_frequency": 1,
   "audit_verdict": "",
-  "audit_note": ""
+  "audit_note": "",
+  "h1_bucket": "post_purchase"
  },
  {
   "claim_id": "C210",
