@@ -32,7 +32,7 @@
   "thin_evidence": true,
   "corpus_frequency": 3,
   "audit_verdict": "held up",
-  "audit_note": "H3 confirmed — Riya saved purely for inspiration (off-app Instagram), Kunal comparison-shortlisted; window-shopping saves were never purchase intent."
+  "audit_note": "H3 corroborated — Riya 'just scrolls Myntra like Instagram'; her wishlist is 'a collection of things she likes' (~10% converts). Window-shopping saves were never purchase intent."
  },
  {
   "claim_id": "C002",
@@ -63,7 +63,7 @@
   "thin_evidence": false,
   "corpus_frequency": 2,
   "audit_verdict": "partly invented",
-  "audit_note": "Return grievance is real, but 0/6 named return-safety as the deciding reason a saved item went unbought — corpus overstates it as a save→buy blocker.",
+  "audit_note": "Return grievance is real, but not one of the 6 named return-safety as the blocker — the corpus overstates it as a save→buy blocker.",
   "h1_bucket": "post_purchase"
  },
  {
@@ -95,7 +95,7 @@
   "thin_evidence": true,
   "corpus_frequency": 2,
   "audit_verdict": "partly invented",
-  "audit_note": "Post-purchase support grievance; interviews put quality/return doubt as background, never the deciding blocker (0/6).",
+  "audit_note": "Post-purchase support grievance; 0/6 cited return/quality doubt as the deciding reason a saved item went unbought.",
   "h1_bucket": "unclear"
  },
  {
@@ -124,8 +124,8 @@
   "confidence_basis": "2 passage(s) across 1 independent platform(s)",
   "thin_evidence": true,
   "corpus_frequency": 2,
-  "audit_verdict": "held up",
-  "audit_note": "Interviews corroborate this contra-direction — returns/uncertainty were the blocker for no respondent; drivers were price, occasion, no-intent, forgetting."
+  "audit_verdict": "not tested",
+  "audit_note": "No respondent mentioned returns at all — as a help or a blocker — so the interviews don't test whether easy returns remove hesitation."
  },
  {
   "claim_id": "C005",
@@ -156,7 +156,7 @@
   "thin_evidence": true,
   "corpus_frequency": 2,
   "audit_verdict": "partly invented",
-  "audit_note": "A completed-purchase size return; fit doubt appears only as background (survey), never the deciding save→buy blocker (0/6).",
+  "audit_note": "A completed-purchase size return; fit doubt was never the deciding blocker — Priya even skipped the size chart, yet forgot rather than doubting fit.",
   "h1_bucket": "post_purchase"
  },
  {
@@ -188,7 +188,7 @@
   "thin_evidence": true,
   "corpus_frequency": 2,
   "audit_verdict": "partly invented",
-  "audit_note": "A post-purchase fit return, not a pre-commit blocker; 0/6 named fit as the deciding reason.",
+  "audit_note": "A post-purchase fit return; 0/6 named fit as the deciding reason not to buy a saved item.",
   "h1_bucket": "post_purchase"
  },
  {
@@ -218,7 +218,7 @@
   "thin_evidence": true,
   "corpus_frequency": 2,
   "audit_verdict": "partly invented",
-  "audit_note": "Mild fit note ('runs small'); interviews place fit/quality as background sentiment, not the blocker.",
+  "audit_note": "Mild fit note; the interviews place fit/quality as background sentiment, never the blocker.",
   "h1_bucket": "unclear"
  },
  {
@@ -250,7 +250,7 @@
   "thin_evidence": true,
   "corpus_frequency": 2,
   "audit_verdict": "partly invented",
-  "audit_note": "Post-purchase size return; not the deciding save→buy blocker in any interview (0/6).",
+  "audit_note": "Post-purchase size return; not the deciding save→buy blocker in any interview.",
   "h1_bucket": "post_purchase"
  },
  {
@@ -282,7 +282,7 @@
   "thin_evidence": true,
   "corpus_frequency": 2,
   "audit_verdict": "partly invented",
-  "audit_note": "Quality doubt is background — Priya didn't even check reviews; never the deciding blocker in any interview.",
+  "audit_note": "Quality doubt is background — Priya 'had no time to check reviews or the size chart', yet the blocker was forgetting, not quality.",
   "h1_bucket": "unclear"
  },
  {
@@ -313,8 +313,8 @@
   "confidence_basis": "2 passage(s) across 1 independent platform(s)",
   "thin_evidence": true,
   "corpus_frequency": 2,
-  "audit_verdict": "held up",
-  "audit_note": "H2 confirmed — occasion window expired (mirrors Sneha's passed wedding); 'occasion passed' was the most common survey reason."
+  "audit_verdict": "not tested",
+  "audit_note": "A late-delivered gift (a COMPLETED purchase), not a wishlist occasion-decay. No respondent had a delivery-delay story — the interviews cover not-buying saved items. (Occasion-decay IS supported — Sneha's wedding, Aarav's trip — but via items left UNBOUGHT, not late delivery.)"
  },
  {
   "claim_id": "C011",
@@ -344,8 +344,8 @@
   "confidence_basis": "2 passage(s) across 1 independent platform(s)",
   "thin_evidence": true,
   "corpus_frequency": 2,
-  "audit_verdict": "held up",
-  "audit_note": "H2 confirmed — the buy-context expired before the item was usable; matches Sneha (wedding) and Aarav (trip)."
+  "audit_verdict": "not tested",
+  "audit_note": "Same — a delivery-SLA failure on a bought item, not the wishlist occasion-decay the interviews describe; no respondent reported one."
  },
  {
   "claim_id": "C012",
@@ -368,7 +368,7 @@
   "thin_evidence": true,
   "corpus_frequency": 1,
   "audit_verdict": "held up",
-  "audit_note": "Comparison/price-checking confirmed — Kunal shortlisted and another option won; Aarav/Rahul price-checked before buying."
+  "audit_note": "Corroborated — Aarav 're-check price', Rahul 'wait for a big sale', Kunal saved 7–8 to 'compare later, choose one'. Price-checking / comparison is real."
  },
  {
   "claim_id": "C013",
@@ -391,7 +391,7 @@
   "thin_evidence": true,
   "corpus_frequency": 1,
   "audit_verdict": "held up",
-  "audit_note": "H3 confirmed — low-commitment 'joyful' saving matches Riya's inspiration saves; adding to cart ≠ intent to buy."
+  "audit_note": "H3 corroborated — low-commitment saving matches Riya ('things she likes') and Priya ('saves interesting things to avoid deciding in the moment'); adding ≠ intent."
  },
  {
   "claim_id": "C014",
@@ -603,7 +603,7 @@
   "thin_evidence": true,
   "corpus_frequency": 1,
   "audit_verdict": "partly invented",
-  "audit_note": "'Return policy poor' is a grievance; interviews: return doubt was background, never the blocker.",
+  "audit_note": "'Return policy poor' is a grievance; the interviews put return doubt as background, never the blocker.",
   "h1_bucket": "post_purchase"
  },
  {
@@ -627,7 +627,7 @@
   "thin_evidence": true,
   "corpus_frequency": 1,
   "audit_verdict": "partly invented",
-  "audit_note": "A return-FEE grievance (not item price); even the interviews' price driver — Aarav/Rahul, on item price — was not H1. Corpus overstates this as an uncertainty blocker.",
+  "audit_note": "A return-FEE grievance — note the interviews' price driver was ITEM price (Aarav ₹2,800, Rahul ₹4,500), and even that wasn't H1. The corpus overstates a return fee as an uncertainty blocker.",
   "h1_bucket": "post_purchase"
  },
  {
@@ -651,7 +651,7 @@
   "thin_evidence": true,
   "corpus_frequency": 1,
   "audit_verdict": "partly invented",
-  "audit_note": "Explicit 'return-safety doubt' claim; the interviews reject return-safety as the deciding blocker (0/6).",
+  "audit_note": "Explicit 'return-safety doubt' claim; no respondent treated return-safety as the deciding blocker.",
   "h1_bucket": "post_purchase"
  },
  {
@@ -675,7 +675,7 @@
   "thin_evidence": true,
   "corpus_frequency": 1,
   "audit_verdict": "not tested",
-  "audit_note": "Delivery-availability (pincode) issue; interviews saw availability block a wanted item once (Rahul, size), but pincode delivery specifically wasn't probed.",
+  "audit_note": "Delivery-availability (pincode); Rahul's item was once blocked by SIZE unavailability, but pincode delivery specifically wasn't probed.",
   "h1_bucket": "post_purchase"
  },
  {
@@ -725,7 +725,7 @@
   "thin_evidence": true,
   "corpus_frequency": 1,
   "audit_verdict": "partly invented",
-  "audit_note": "Return-fee-affects-decision claim; interviews don't support return-safety as the deciding blocker.",
+  "audit_note": "Return-fee-affects-decision; the interviews' price sensitivity was item price (Aarav/Rahul), not return fees, and not H1.",
   "h1_bucket": "post_purchase"
  },
  {
@@ -775,7 +775,7 @@
   "thin_evidence": true,
   "corpus_frequency": 1,
   "audit_verdict": "partly invented",
-  "audit_note": "Explicit return-uncertainty ('not sure it can be returned'); 0/6 named return doubt as deciding — corpus overstates.",
+  "audit_note": "Explicit return-uncertainty; 0/6 named return doubt as the deciding reason a saved item went unbought.",
   "h1_bucket": "unclear"
  },
  {
@@ -799,7 +799,7 @@
   "thin_evidence": true,
   "corpus_frequency": 1,
   "audit_verdict": "partly invented",
-  "audit_note": "Return-denial grievance affecting future orders; return-safety not corroborated as the deciding blocker.",
+  "audit_note": "Return-denial grievance affecting future orders; return-safety not corroborated as the blocker.",
   "h1_bucket": "post_purchase"
  },
  {

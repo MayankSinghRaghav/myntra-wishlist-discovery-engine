@@ -34,12 +34,12 @@
   "n_audited": 30,
   "n_total": 224,
   "coverage_pct": 13.4,
-  "n_substantive": 21,
-  "n_not_tested": 9,
+  "n_substantive": 18,
+  "n_not_tested": 12,
   "distribution": {
-   "held up": 6,
+   "held up": 3,
    "partly invented": 15,
-   "not tested": 9
+   "not tested": 12
   },
   "n_interviews": 6
  },

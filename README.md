@@ -102,10 +102,12 @@ Codes the **top 30 ranked claims** against the blind-coded interview synthesis (
 (interviews corroborate), **partly invented** (corpus overstates beyond the interviews), **rejected**
 (interviews contradict), **not tested** (interviews don't speak to it — no fabricated support). Writes
 `audit_verdict`/`audit_note` per claim + `audit_coverage` into `corpus_manifest.json`; coverage and
-tally are computed from the register. Current result: **30 of 224 verdicted (13.4%) — 6 held up /
-15 partly invented / 9 not tested / 0 rejected**. The 15 partly-invented are H1 return/fit grievances
-the corpus overstates as blockers; the 6 held-up are H2 occasion-decay + H3 inspiration/comparison +
-the H1-contradicting 'easy returns'. Analyst coding grounded in the interviews, editable in the file.
+tally are computed from the register. Current result: **30 of 224 verdicted (13.4%) — 3 held up /
+15 partly invented / 12 not tested / 0 rejected**. The 15 partly-invented are H1 return/fit grievances
+the corpus overstates as save→buy blockers (0/6 named fit/quality/return as the deciding reason); the
+3 held-up are H3 inspiration/comparison (Riya/Kunal); the 12 not-tested are post-purchase service +
+delivery/returns claims the transcripts don't cover. Grounded in the transcripts (`interviews.md`),
+editable in the file — each verdict's note cites a respondent.
 
 ### H1 re-cut (`reclassify_h1.py`) — power the interview finding with data
 The interviews rejected H1 as the primary blocker (n=6); this pass powers that with the corpus.

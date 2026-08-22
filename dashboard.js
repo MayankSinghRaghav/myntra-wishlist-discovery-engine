@@ -94,7 +94,8 @@ function render(d) {
   document.getElementById("auditCoverage").innerHTML =
     `<b>Audit coverage: ${a.n_audited} of ${a.n_total} claims (${a.coverage_pct}%)</b> verdicted against the ${a.n_interviews} interviews — ${distTxt}. `
     + `“Not tested” = the interviews don't speak to that claim, so no verdict is forced (no fabricated support). `
-    + `${pending} lower-ranked claims remain <span class="muted">pending</span>.`;
+    + `${pending} lower-ranked claims remain <span class="muted">pending</span>. `
+    + `Evidence base: <a href="interviews.md" target="_blank" rel="noopener">the 6 transcripts</a> (each verdict's “why” cites them).`;
 
   // register
   let R = `<tr><th>#</th><th>Claim</th><th>H</th><th>Stance</th><th>Theme</th><th>Src</th><th>Conf</th><th>Quotes</th><th>Interview verdict</th></tr>`;
