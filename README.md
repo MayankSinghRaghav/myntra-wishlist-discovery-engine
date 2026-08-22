@@ -30,7 +30,7 @@ analyze.py                   → claims_register.json ranked claims: source_quot
                              → corpus_manifest.json honest source counts by platform + date range (slide-3 corpus size)
                              → early_signal.md      pre-interview lean per hypothesis + segment signal for the interview screener
                              → data.json            dashboard artifact
-index.html + app.js          → static dashboard     reads data.json, client-side RAG, NO API key at runtime
+index.html + dashboard.js          → static dashboard     reads data.json, client-side RAG, NO API key at runtime
 ```
 
 ## Output contract — `claims_register.json`
@@ -113,7 +113,7 @@ python ingest_apify.py --play raw_data.csv --youtube yt.json --reddit reddit.jso
 Author/username are dropped; Reddit HTML + "submitted by" boilerplate stripped; deduped against Play.
 
 ## Deploy (Vercel — static, keyless, free)
-`index.html` + `app.js` + `data.json`, no framework, no build. `vercel.json` pins it static.
+`index.html` + `dashboard.js` + `data.json`, no framework, no build. `vercel.json` pins it static.
 
 ```bash
 npm i -g vercel
