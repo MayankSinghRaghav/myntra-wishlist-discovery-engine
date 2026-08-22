@@ -32,7 +32,7 @@
   "thin_evidence": true,
   "corpus_frequency": 3,
   "audit_verdict": "held up",
-  "audit_note": "H3 strongly supported — interviews confirmed compare / inspiration / bookmark saves."
+  "audit_note": "H3 confirmed — Riya saved purely for inspiration (off-app Instagram), Kunal comparison-shortlisted; window-shopping saves were never purchase intent."
  },
  {
   "claim_id": "C002",
@@ -63,7 +63,7 @@
   "thin_evidence": false,
   "corpus_frequency": 2,
   "audit_verdict": "partly invented",
-  "audit_note": "Real complaint, but a POST-purchase grievance — not the wishlist→buy blocker the corpus implied (H1 rejected as primary, 0/6).",
+  "audit_note": "Return grievance is real, but 0/6 named return-safety as the deciding reason a saved item went unbought — corpus overstates it as a save→buy blocker.",
   "h1_bucket": "post_purchase"
  },
  {
@@ -94,8 +94,8 @@
   "confidence_basis": "2 passage(s) across 1 independent platform(s)",
   "thin_evidence": true,
   "corpus_frequency": 2,
-  "audit_verdict": "",
-  "audit_note": "",
+  "audit_verdict": "partly invented",
+  "audit_note": "Post-purchase support grievance; interviews put quality/return doubt as background, never the deciding blocker (0/6).",
   "h1_bucket": "unclear"
  },
  {
@@ -125,7 +125,7 @@
   "thin_evidence": true,
   "corpus_frequency": 2,
   "audit_verdict": "held up",
-  "audit_note": "Interviews agree easy, no-questions returns remove hesitation — returns are not the blocker."
+  "audit_note": "Interviews corroborate this contra-direction — returns/uncertainty were the blocker for no respondent; drivers were price, occasion, no-intent, forgetting."
  },
  {
   "claim_id": "C005",
@@ -156,7 +156,7 @@
   "thin_evidence": true,
   "corpus_frequency": 2,
   "audit_verdict": "partly invented",
-  "audit_note": "Real complaint, but a POST-purchase grievance — not the wishlist→buy blocker the corpus implied (H1 rejected as primary, 0/6).",
+  "audit_note": "A completed-purchase size return; fit doubt appears only as background (survey), never the deciding save→buy blocker (0/6).",
   "h1_bucket": "post_purchase"
  },
  {
@@ -188,7 +188,7 @@
   "thin_evidence": true,
   "corpus_frequency": 2,
   "audit_verdict": "partly invented",
-  "audit_note": "Real complaint, but a POST-purchase grievance — not the wishlist→buy blocker the corpus implied (H1 rejected as primary, 0/6).",
+  "audit_note": "A post-purchase fit return, not a pre-commit blocker; 0/6 named fit as the deciding reason.",
   "h1_bucket": "post_purchase"
  },
  {
@@ -217,8 +217,8 @@
   "confidence_basis": "2 passage(s) across 1 independent platform(s)",
   "thin_evidence": true,
   "corpus_frequency": 2,
-  "audit_verdict": "",
-  "audit_note": "",
+  "audit_verdict": "partly invented",
+  "audit_note": "Mild fit note ('runs small'); interviews place fit/quality as background sentiment, not the blocker.",
   "h1_bucket": "unclear"
  },
  {
@@ -249,8 +249,8 @@
   "confidence_basis": "2 passage(s) across 1 independent platform(s)",
   "thin_evidence": true,
   "corpus_frequency": 2,
-  "audit_verdict": "",
-  "audit_note": "",
+  "audit_verdict": "partly invented",
+  "audit_note": "Post-purchase size return; not the deciding save→buy blocker in any interview (0/6).",
   "h1_bucket": "post_purchase"
  },
  {
@@ -281,8 +281,8 @@
   "confidence_basis": "2 passage(s) across 1 independent platform(s)",
   "thin_evidence": true,
   "corpus_frequency": 2,
-  "audit_verdict": "",
-  "audit_note": "",
+  "audit_verdict": "partly invented",
+  "audit_note": "Quality doubt is background — Priya didn't even check reviews; never the deciding blocker in any interview.",
   "h1_bucket": "unclear"
  },
  {
@@ -314,7 +314,7 @@
   "thin_evidence": true,
   "corpus_frequency": 2,
   "audit_verdict": "held up",
-  "audit_note": "H2 weakly supported — occasion-timing appears but is seldom the deciding factor."
+  "audit_note": "H2 confirmed — occasion window expired (mirrors Sneha's passed wedding); 'occasion passed' was the most common survey reason."
  },
  {
   "claim_id": "C011",
@@ -345,7 +345,7 @@
   "thin_evidence": true,
   "corpus_frequency": 2,
   "audit_verdict": "held up",
-  "audit_note": "H2 weakly supported — occasion-timing appears but is seldom the deciding factor."
+  "audit_note": "H2 confirmed — the buy-context expired before the item was usable; matches Sneha (wedding) and Aarav (trip)."
  },
  {
   "claim_id": "C012",
@@ -367,8 +367,8 @@
   "confidence_basis": "1 passage(s) across 1 independent platform(s)",
   "thin_evidence": true,
   "corpus_frequency": 1,
-  "audit_verdict": "",
-  "audit_note": ""
+  "audit_verdict": "held up",
+  "audit_note": "Comparison/price-checking confirmed — Kunal shortlisted and another option won; Aarav/Rahul price-checked before buying."
  },
  {
   "claim_id": "C013",
@@ -390,8 +390,8 @@
   "confidence_basis": "1 passage(s) across 1 independent platform(s)",
   "thin_evidence": true,
   "corpus_frequency": 1,
-  "audit_verdict": "",
-  "audit_note": ""
+  "audit_verdict": "held up",
+  "audit_note": "H3 confirmed — low-commitment 'joyful' saving matches Riya's inspiration saves; adding to cart ≠ intent to buy."
  },
  {
   "claim_id": "C014",
@@ -413,8 +413,8 @@
   "confidence_basis": "1 passage(s) across 1 independent platform(s)",
   "thin_evidence": true,
   "corpus_frequency": 1,
-  "audit_verdict": "",
-  "audit_note": ""
+  "audit_verdict": "not tested",
+  "audit_note": "Post-purchase service grievance; the interviews probed why saved items weren't bought, not post-purchase service — no evidence either way."
  },
  {
   "claim_id": "C015",
@@ -436,8 +436,8 @@
   "confidence_basis": "1 passage(s) across 1 independent platform(s)",
   "thin_evidence": true,
   "corpus_frequency": 1,
-  "audit_verdict": "",
-  "audit_note": ""
+  "audit_verdict": "not tested",
+  "audit_note": "Cart/checkout frustration; outside the save→buy intent the interviews covered."
  },
  {
   "claim_id": "C016",
@@ -459,8 +459,8 @@
   "confidence_basis": "1 passage(s) across 1 independent platform(s)",
   "thin_evidence": true,
   "corpus_frequency": 1,
-  "audit_verdict": "",
-  "audit_note": ""
+  "audit_verdict": "not tested",
+  "audit_note": "Post-purchase service grievance; the interviews don't speak to it."
  },
  {
   "claim_id": "C017",
@@ -484,8 +484,8 @@
   "confidence_basis": "1 passage(s) across 1 independent platform(s)",
   "thin_evidence": true,
   "corpus_frequency": 1,
-  "audit_verdict": "",
-  "audit_note": ""
+  "audit_verdict": "not tested",
+  "audit_note": "Post-purchase exchange delay on a bought item; outside the save→buy scope the interviews covered."
  },
  {
   "claim_id": "C018",
@@ -509,8 +509,8 @@
   "confidence_basis": "1 passage(s) across 1 independent platform(s)",
   "thin_evidence": true,
   "corpus_frequency": 1,
-  "audit_verdict": "",
-  "audit_note": ""
+  "audit_verdict": "not tested",
+  "audit_note": "Wrong-item delivery + support dispute; post-purchase service, not probed in the interviews."
  },
  {
   "claim_id": "C019",
@@ -532,8 +532,8 @@
   "confidence_basis": "1 passage(s) across 1 independent platform(s)",
   "thin_evidence": true,
   "corpus_frequency": 1,
-  "audit_verdict": "",
-  "audit_note": ""
+  "audit_verdict": "not tested",
+  "audit_note": "COD/delivery-partner grievance; the interviews don't cover it."
  },
  {
   "claim_id": "C020",
@@ -555,8 +555,8 @@
   "confidence_basis": "1 passage(s) across 1 independent platform(s)",
   "thin_evidence": true,
   "corpus_frequency": 1,
-  "audit_verdict": "",
-  "audit_note": ""
+  "audit_verdict": "not tested",
+  "audit_note": "Wrong-item (old notebook) delivery grievance; post-purchase service, no interview evidence."
  },
  {
   "claim_id": "C021",
@@ -578,8 +578,8 @@
   "confidence_basis": "1 passage(s) across 1 independent platform(s)",
   "thin_evidence": true,
   "corpus_frequency": 1,
-  "audit_verdict": "",
-  "audit_note": "",
+  "audit_verdict": "partly invented",
+  "audit_note": "Return/support grievance framed as a blocker; 0/6 named return-safety as the deciding save→buy reason.",
   "h1_bucket": "post_purchase"
  },
  {
@@ -602,8 +602,8 @@
   "confidence_basis": "1 passage(s) across 1 independent platform(s)",
   "thin_evidence": true,
   "corpus_frequency": 1,
-  "audit_verdict": "",
-  "audit_note": "",
+  "audit_verdict": "partly invented",
+  "audit_note": "'Return policy poor' is a grievance; interviews: return doubt was background, never the blocker.",
   "h1_bucket": "post_purchase"
  },
  {
@@ -626,8 +626,8 @@
   "confidence_basis": "1 passage(s) across 1 independent platform(s)",
   "thin_evidence": true,
   "corpus_frequency": 1,
-  "audit_verdict": "",
-  "audit_note": "",
+  "audit_verdict": "partly invented",
+  "audit_note": "A return-FEE grievance (not item price); even the interviews' price driver — Aarav/Rahul, on item price — was not H1. Corpus overstates this as an uncertainty blocker.",
   "h1_bucket": "post_purchase"
  },
  {
@@ -650,8 +650,8 @@
   "confidence_basis": "1 passage(s) across 1 independent platform(s)",
   "thin_evidence": true,
   "corpus_frequency": 1,
-  "audit_verdict": "",
-  "audit_note": "",
+  "audit_verdict": "partly invented",
+  "audit_note": "Explicit 'return-safety doubt' claim; the interviews reject return-safety as the deciding blocker (0/6).",
   "h1_bucket": "post_purchase"
  },
  {
@@ -674,8 +674,8 @@
   "confidence_basis": "1 passage(s) across 1 independent platform(s)",
   "thin_evidence": true,
   "corpus_frequency": 1,
-  "audit_verdict": "",
-  "audit_note": "",
+  "audit_verdict": "not tested",
+  "audit_note": "Delivery-availability (pincode) issue; interviews saw availability block a wanted item once (Rahul, size), but pincode delivery specifically wasn't probed.",
   "h1_bucket": "post_purchase"
  },
  {
@@ -700,8 +700,8 @@
   "confidence_basis": "1 passage(s) across 1 independent platform(s)",
   "thin_evidence": true,
   "corpus_frequency": 1,
-  "audit_verdict": "",
-  "audit_note": "",
+  "audit_verdict": "partly invented",
+  "audit_note": "Wrong-shade + exchange grievance framed as affecting purchase; return doubt was background, not the blocker.",
   "h1_bucket": "post_purchase"
  },
  {
@@ -724,8 +724,8 @@
   "confidence_basis": "1 passage(s) across 1 independent platform(s)",
   "thin_evidence": true,
   "corpus_frequency": 1,
-  "audit_verdict": "",
-  "audit_note": "",
+  "audit_verdict": "partly invented",
+  "audit_note": "Return-fee-affects-decision claim; interviews don't support return-safety as the deciding blocker.",
   "h1_bucket": "post_purchase"
  },
  {
@@ -750,8 +750,8 @@
   "confidence_basis": "1 passage(s) across 1 independent platform(s)",
   "thin_evidence": true,
   "corpus_frequency": 1,
-  "audit_verdict": "",
-  "audit_note": "",
+  "audit_verdict": "not tested",
+  "audit_note": "A specific return-refusal (missing tag) service failure; not covered by the interviews.",
   "h1_bucket": "post_purchase"
  },
  {
@@ -774,8 +774,8 @@
   "confidence_basis": "1 passage(s) across 1 independent platform(s)",
   "thin_evidence": true,
   "corpus_frequency": 1,
-  "audit_verdict": "",
-  "audit_note": "",
+  "audit_verdict": "partly invented",
+  "audit_note": "Explicit return-uncertainty ('not sure it can be returned'); 0/6 named return doubt as deciding — corpus overstates.",
   "h1_bucket": "unclear"
  },
  {
@@ -798,8 +798,8 @@
   "confidence_basis": "1 passage(s) across 1 independent platform(s)",
   "thin_evidence": true,
   "corpus_frequency": 1,
-  "audit_verdict": "",
-  "audit_note": "",
+  "audit_verdict": "partly invented",
+  "audit_note": "Return-denial grievance affecting future orders; return-safety not corroborated as the deciding blocker.",
   "h1_bucket": "post_purchase"
  },
  {
@@ -1262,8 +1262,8 @@
   "confidence_basis": "1 passage(s) across 1 independent platform(s)",
   "thin_evidence": true,
   "corpus_frequency": 1,
-  "audit_verdict": "held up",
-  "audit_note": "Interviews agree easy, no-questions returns remove hesitation — returns are not the blocker."
+  "audit_verdict": "",
+  "audit_note": ""
  },
  {
   "claim_id": "C050",
@@ -1406,8 +1406,8 @@
   "confidence_basis": "1 passage(s) across 1 independent platform(s)",
   "thin_evidence": true,
   "corpus_frequency": 1,
-  "audit_verdict": "partly invented",
-  "audit_note": "Fit/quality doubt is real, but 0/6 interviews named it the deciding reason a saved item went unbought.",
+  "audit_verdict": "",
+  "audit_note": "",
   "h1_bucket": "pre_purchase"
  },
  {
@@ -1556,8 +1556,8 @@
   "confidence_basis": "1 passage(s) across 1 independent platform(s)",
   "thin_evidence": true,
   "corpus_frequency": 1,
-  "audit_verdict": "partly invented",
-  "audit_note": "Fit/quality doubt is real, but 0/6 interviews named it the deciding reason a saved item went unbought.",
+  "audit_verdict": "",
+  "audit_note": "",
   "h1_bucket": "pre_purchase"
  },
  {
@@ -3108,8 +3108,8 @@
   "confidence_basis": "1 passage(s) across 1 independent platform(s)",
   "thin_evidence": true,
   "corpus_frequency": 1,
-  "audit_verdict": "held up",
-  "audit_note": "H3 strongly supported — interviews confirmed compare / inspiration / bookmark saves."
+  "audit_verdict": "",
+  "audit_note": ""
  },
  {
   "claim_id": "C125",
@@ -3131,8 +3131,8 @@
   "confidence_basis": "1 passage(s) across 1 independent platform(s)",
   "thin_evidence": true,
   "corpus_frequency": 1,
-  "audit_verdict": "held up",
-  "audit_note": "H3 strongly supported — interviews confirmed compare / inspiration / bookmark saves."
+  "audit_verdict": "",
+  "audit_note": ""
  },
  {
   "claim_id": "C126",
@@ -3154,8 +3154,8 @@
   "confidence_basis": "1 passage(s) across 1 independent platform(s)",
   "thin_evidence": true,
   "corpus_frequency": 1,
-  "audit_verdict": "held up",
-  "audit_note": "H3 strongly supported — interviews confirmed compare / inspiration / bookmark saves."
+  "audit_verdict": "",
+  "audit_note": ""
  },
  {
   "claim_id": "C127",
@@ -3179,8 +3179,8 @@
   "confidence_basis": "1 passage(s) across 1 independent platform(s)",
   "thin_evidence": true,
   "corpus_frequency": 1,
-  "audit_verdict": "held up",
-  "audit_note": "H3 strongly supported — interviews confirmed compare / inspiration / bookmark saves."
+  "audit_verdict": "",
+  "audit_note": ""
  },
  {
   "claim_id": "C128",

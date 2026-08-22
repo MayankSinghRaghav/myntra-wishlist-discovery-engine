@@ -30,6 +30,19 @@
   "net_lean": 118,
   "summary": "Of 125 H1-supporting claims, post-purchase grievance is the larger bucket — 77 (62%) vs 8 pre-purchase (6%), 40 unclear. Computed from the verbatim quotes, this means the corpus's H1 lean (net +118) is largely NOT about pre-purchase hesitation on saved items; it is dominated by complaints about returns/delivery on completed purchases. That is the data-scale echo of the 6 interviews: H1 is not the primary saved-item→purchase blocker."
  },
+ "audit_coverage": {
+  "n_audited": 30,
+  "n_total": 224,
+  "coverage_pct": 13.4,
+  "n_substantive": 21,
+  "n_not_tested": 9,
+  "distribution": {
+   "held up": 6,
+   "partly invented": 15,
+   "not tested": 9
+  },
+  "n_interviews": 6
+ },
  "n_claims_extracted": 259,
  "n_claims_traceable": 236,
  "n_register_entries": 224,

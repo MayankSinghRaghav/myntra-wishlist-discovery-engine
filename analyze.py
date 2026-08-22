@@ -193,60 +193,29 @@ def build_register(claim_rows: list[dict]) -> list[dict]:
 INTERVIEW = {
     "n_interviews": 6,
     "h1": {"verdict": "Rejected as primary blocker", "strength": "rejected",
-           "detail": "0 of 6 interviews named fit/size/quality as the deciding reason a saved item went unbought"},
-    "h2": {"verdict": "Weakly supported", "strength": "weak",
-           "detail": "occasion / timing appeared but was seldom the deciding factor"},
+           "detail": "0 of 6 interviews named fit/size/quality/return as the deciding reason a saved item went unbought"},
+    "h2": {"verdict": "Supported", "strength": "strong",
+           "detail": "occasion/relevance decay confirmed — Sneha's wedding passed, Aarav's trip decayed; 'occasion passed' was the most common survey reason (bigger than the prior expected)"},
     "h3": {"verdict": "Strongly supported", "strength": "strong",
-           "detail": "respondents classified many saves as compare / inspiration / bookmark — not deferred buys"},
+           "detail": "two flavours — pure inspiration (Riya, off-app trigger) + comparison-shortlisting (Kunal): item-level non-conversion is correct behaviour, so the denominator is contaminated"},
+    # findings the interviews surfaced OUTSIDE the three hypotheses (flagged, not structural calls)
+    "additional": [
+        {"label": "Price (the barred lever)", "detail": "the two clearest real-intent cases (Aarav, Rahul) were both blocked by price and both asked for a target-price alert — the one lever the brief forbids"},
+        {"label": "Forgetting / attention", "detail": "Priya (and Riya) simply forgot — a Stage-1 re-exposure failure distinct from H2's relevance decay; the item stays relevant, the user never returns"},
+    ],
 }
 
 # pre-purchase uncertainty vs post-purchase grievance — the H1 re-cut lives in reclassify_h1.py
 # (a standalone, reproducible pass). analyze.py delegates to it so there is ONE classifier.
 import reclassify_h1  # noqa: E402
 
-
-def h1_split_of(entry: dict) -> str:
-    """Bucket used to choose interview-audit targets; delegates to the single classifier."""
-    return reclassify_h1.classify_h1(reclassify_h1._text_of(entry))
-
-
-# audit plan: apply the interview verdicts to the highest-signal claims each verdict bears on.
-# (register is already ranked, so "first N matching" = top N by confidence/frequency.)
-AUDIT_PLAN = [
-    ("H3", "supports", None, 5, "held up",
-     "H3 strongly supported — interviews confirmed compare / inspiration / bookmark saves."),
-    ("H2", "supports", None, 2, "held up",
-     "H2 weakly supported — occasion-timing appears but is seldom the deciding factor."),
-    ("H1", "supports", "post_purchase", 3, "partly invented",
-     "Real complaint, but a POST-purchase grievance — not the wishlist→buy blocker the corpus implied "
-     "(H1 rejected as primary, 0/6)."),
-    ("H1", "supports", "pre_purchase", 2, "partly invented",
-     "Fit/quality doubt is real, but 0/6 interviews named it the deciding reason a saved item went unbought."),
-    ("H1", "contradicts", None, 2, "held up",
-     "Interviews agree easy, no-questions returns remove hesitation — returns are not the blocker."),
-]
+# Per-claim audit of the top-30 claims against the n=6 interviews lives in interview_audit.py
+# (explicit, transcript-grounded coding). analyze.py delegates so there is one coded source of truth.
+import interview_audit  # noqa: E402
 
 
 def apply_interview_audit(register: list[dict]) -> dict:
-    """Fill audit_verdict/audit_note on the top claims each interview verdict adjudicates.
-    Coverage is deliberately partial (6 interviews) — the long tail stays unaudited/pending."""
-    for hyp, stance, split, n, verdict, note in AUDIT_PLAN:
-        cnt = 0
-        for e in register:
-            if cnt >= n:
-                break
-            if e["hypothesis_map"] == hyp and e["stance"] == stance and not e["audit_verdict"]:
-                if split and h1_split_of(e) != split:
-                    continue
-                e["audit_verdict"] = verdict
-                e["audit_note"] = note
-                cnt += 1
-    audited = [e for e in register if e["audit_verdict"]]
-    dist: dict[str, int] = {}
-    for e in audited:
-        dist[e["audit_verdict"]] = dist.get(e["audit_verdict"], 0) + 1
-    return {"n_audited": len(audited), "n_total": len(register), "distribution": dist,
-            "n_interviews": INTERVIEW["n_interviews"]}
+    return interview_audit.apply(register)
 
 
 # ---------------------------------------------------------------- manifest / lean / discard
@@ -429,6 +398,7 @@ def main() -> None:
     lean = hypothesis_lean(claim_rows)
     h1_split = reclassify_h1.apply(register, net_lean=lean["h1"]["net"])  # writes h1_bucket + returns split
     manifest["h1_support_split"] = h1_split
+    manifest["audit_coverage"] = audit
     cats = category_signal(claim_rows)
     discard = discard_pile(rows, claim_rows, register)
 

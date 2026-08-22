@@ -87,6 +87,7 @@ python classify.py                  # full corpus -> claims.csv
 # 3. Rank register + manifest + early signal
 python analyze.py                   # -> claims_register.json, corpus_manifest.json, early_signal.md, data.json
 python reclassify_h1.py             # re-cut H1-supporting claims: pre-purchase vs post-purchase grievance
+python interview_audit.py           # verdict top-30 claims vs the n=6 interviews (held up/partly invented/rejected/not tested)
 python build_static.py              # inline dashboard.js + data.json -> self-contained index.html
 
 # 4. Dashboard (static — just serve the folder)
@@ -95,6 +96,16 @@ python -m http.server 8099          # open http://localhost:8099
 # offline sanity checks (no network, no key)
 python test_pipeline.py
 ```
+
+### Interview audit (`interview_audit.py`) — verdict the top claims against the n=6 interviews
+Codes the **top 30 ranked claims** against the blind-coded interview synthesis (n=6): **held up**
+(interviews corroborate), **partly invented** (corpus overstates beyond the interviews), **rejected**
+(interviews contradict), **not tested** (interviews don't speak to it — no fabricated support). Writes
+`audit_verdict`/`audit_note` per claim + `audit_coverage` into `corpus_manifest.json`; coverage and
+tally are computed from the register. Current result: **30 of 224 verdicted (13.4%) — 6 held up /
+15 partly invented / 9 not tested / 0 rejected**. The 15 partly-invented are H1 return/fit grievances
+the corpus overstates as blockers; the 6 held-up are H2 occasion-decay + H3 inspiration/comparison +
+the H1-contradicting 'easy returns'. Analyst coding grounded in the interviews, editable in the file.
 
 ### H1 re-cut (`reclassify_h1.py`) — power the interview finding with data
 The interviews rejected H1 as the primary blocker (n=6); this pass powers that with the corpus.

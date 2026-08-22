@@ -87,11 +87,14 @@ function render(d) {
   document.getElementById("h1split").innerHTML = renderH1Split(d.h1_split);
 
   // audit coverage — honest, computed from how many register entries carry a verdict
-  const a = d.audit || { n_audited: 0, n_total: (d.register || []).length, distribution: {}, n_interviews: 0 };
-  const distTxt = Object.entries(a.distribution || {}).map(([k, n]) => `${n} ${k}`).join(" · ") || "none yet";
+  const a = d.audit || { n_audited: 0, n_total: (d.register || []).length, distribution: {}, n_interviews: 0, coverage_pct: 0 };
+  const order = ["held up", "partly invented", "rejected", "not tested"];
+  const distTxt = order.filter(k => a.distribution && a.distribution[k]).map(k => `${a.distribution[k]} ${k}`).join(" · ");
+  const pending = a.n_total - a.n_audited;
   document.getElementById("auditCoverage").innerHTML =
-    `<b>${a.n_audited} of ${a.n_total} claims</b> carry an interview verdict (${a.n_interviews} interviews) — ${distTxt}. `
-    + `The rest are <span class="muted">pending</span>: 6 interviews adjudicate the highest-signal claims, not the long tail.`;
+    `<b>Audit coverage: ${a.n_audited} of ${a.n_total} claims (${a.coverage_pct}%)</b> verdicted against the ${a.n_interviews} interviews — ${distTxt}. `
+    + `“Not tested” = the interviews don't speak to that claim, so no verdict is forced (no fabricated support). `
+    + `${pending} lower-ranked claims remain <span class="muted">pending</span>.`;
 
   // register
   let R = `<tr><th>#</th><th>Claim</th><th>H</th><th>Stance</th><th>Theme</th><th>Src</th><th>Conf</th><th>Quotes</th><th>Interview verdict</th></tr>`;
@@ -149,9 +152,17 @@ function renderReconcile(d) {
         (${sp.unclear != null ? sp.unclear : (sp.ambiguous || 0)} unclear). Complaint-skewed reviews shout about returns, not about the save→buy decision.</li>
       <li>And it <b>cuts both ways</b> — the corpus also carries claims that argue <i>against</i> H1${cq ? `, e.g. ${cq}` : ""}.</li>
       <li>Public text can only <b>propose</b> hypotheses. Only <b>primary research on users' own saved items</b> can settle which
-        blocker actually decides a non-purchase — and it did: H3 strong, H2 weak, <b>H1 rejected</b>.</li>
+        blocker actually decides a non-purchase — and it did: <b>H3 strong, H2 supported, H1 rejected</b>.</li>
     </ul>
+    ${renderAdditional(d.interview)}
   </div>`;
+}
+
+function renderAdditional(iv) {
+  const add = (iv || {}).additional || [];
+  if (!add.length) return "";
+  return `<p class="small" style="margin-top:10px"><b>Also surfaced in the interviews (outside H1/H2/H3 — flagged, not decided):</b></p>
+    <ul>${add.map(x => `<li><b>${esc(x.label)}</b> — ${esc(x.detail)}</li>`).join("")}</ul>`;
 }
 
 function renderH1Split(s) {
