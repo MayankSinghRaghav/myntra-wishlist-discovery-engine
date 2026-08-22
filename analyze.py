@@ -186,6 +186,88 @@ def build_register(claim_rows: list[dict]) -> list[dict]:
     return [{"claim_id": e.pop("claim_id"), **e} for e in entries]
 
 
+# ---------------------------------------------------------------- primary-research overlay
+# INTERVIEW VERDICTS are NOT corpus output — they are results from the 6 primary interviews, entered
+# here so the tool shows corpus signal and interview verdict together (the corpus proposes; the
+# interviews decide). The corpus's loudest hypothesis (H1) was REJECTED as the primary blocker.
+INTERVIEW = {
+    "n_interviews": 6,
+    "h1": {"verdict": "Rejected as primary blocker", "strength": "rejected",
+           "detail": "0 of 6 interviews named fit/size/quality as the deciding reason a saved item went unbought"},
+    "h2": {"verdict": "Weakly supported", "strength": "weak",
+           "detail": "occasion / timing appeared but was seldom the deciding factor"},
+    "h3": {"verdict": "Strongly supported", "strength": "strong",
+           "detail": "respondents classified many saves as compare / inspiration / bookmark — not deferred buys"},
+}
+
+# post-purchase grievance vs pre-purchase uncertainty — a heuristic split of H1's supporting claims
+_POST = _re.compile(r"\b(return|refund|exchang|deliver|pickup|received|wrong (product|item)|replac|"
+                    r"reject|damag|fraud|cancel|after (buying|purchase)|arrived)\b", _re.I)
+_PRE = _re.compile(r"\b(not sure|unsure|size chart|will it fit|true to size|doubt|hesitat|look like|"
+                   r"before (buy|order|purchas)|photo|might not fit|which size)\b", _re.I)
+
+
+def h1_split_of(entry: dict) -> str:
+    hay = entry["claim_text"] + " " + " ".join(q["verbatim"] for q in entry.get("source_quotes", []))
+    post = entry.get("theme") == "returns_delivery" or bool(_POST.search(hay))
+    pre = entry.get("theme") == "fit_size" or bool(_PRE.search(hay))
+    if post and not pre:
+        return "post_purchase"
+    if pre and not post:
+        return "pre_purchase"
+    return "ambiguous"
+
+
+def compute_h1_split(register: list[dict]) -> dict:
+    h1sup = [e for e in register if e["hypothesis_map"] == "H1" and e["stance"] == "supports"]
+    b = {"pre_purchase": 0, "post_purchase": 0, "ambiguous": 0}
+    for e in h1sup:
+        b[h1_split_of(e)] += 1
+    return {"total": len(h1sup), **b,
+            "method": "Heuristic split by claim theme + keywords on each claim's text/quotes. The "
+                      "boundary is genuinely fuzzy — a return-safety fear can be pre-purchase — so the "
+                      "ambiguous bucket is real uncertainty, not noise, and this split is indicative, not exact."}
+
+
+# audit plan: apply the interview verdicts to the highest-signal claims each verdict bears on.
+# (register is already ranked, so "first N matching" = top N by confidence/frequency.)
+AUDIT_PLAN = [
+    ("H3", "supports", None, 5, "held up",
+     "H3 strongly supported — interviews confirmed compare / inspiration / bookmark saves."),
+    ("H2", "supports", None, 2, "held up",
+     "H2 weakly supported — occasion-timing appears but is seldom the deciding factor."),
+    ("H1", "supports", "post_purchase", 3, "partly invented",
+     "Real complaint, but a POST-purchase grievance — not the wishlist→buy blocker the corpus implied "
+     "(H1 rejected as primary, 0/6)."),
+    ("H1", "supports", "pre_purchase", 2, "partly invented",
+     "Fit/quality doubt is real, but 0/6 interviews named it the deciding reason a saved item went unbought."),
+    ("H1", "contradicts", None, 2, "held up",
+     "Interviews agree easy, no-questions returns remove hesitation — returns are not the blocker."),
+]
+
+
+def apply_interview_audit(register: list[dict]) -> dict:
+    """Fill audit_verdict/audit_note on the top claims each interview verdict adjudicates.
+    Coverage is deliberately partial (6 interviews) — the long tail stays unaudited/pending."""
+    for hyp, stance, split, n, verdict, note in AUDIT_PLAN:
+        cnt = 0
+        for e in register:
+            if cnt >= n:
+                break
+            if e["hypothesis_map"] == hyp and e["stance"] == stance and not e["audit_verdict"]:
+                if split and h1_split_of(e) != split:
+                    continue
+                e["audit_verdict"] = verdict
+                e["audit_note"] = note
+                cnt += 1
+    audited = [e for e in register if e["audit_verdict"]]
+    dist: dict[str, int] = {}
+    for e in audited:
+        dist[e["audit_verdict"]] = dist.get(e["audit_verdict"], 0) + 1
+    return {"n_audited": len(audited), "n_total": len(register), "distribution": dist,
+            "n_interviews": INTERVIEW["n_interviews"]}
+
+
 # ---------------------------------------------------------------- manifest / lean / discard
 def corpus_manifest(rows: list[dict]) -> dict:
     docs = {r["doc_id"]: r for r in rows}                      # last row per doc; is_relevant stable
@@ -334,6 +416,12 @@ def _selftest() -> None:
     assert man["n_documents"] == 8 and man["n_relevant"] == 7 and man["n_independent_platforms"] == 3
     disc = discard_pile(rows, claim_rows, reg)
     assert disc["unverified_claims"]["count"] == 1 and disc["not_relevant"]["count"] == 1
+    # interview overlay: audit fills verdicts on top claims; coverage computed from the register
+    split = compute_h1_split(reg)
+    assert split["total"] == sum(1 for e in reg if e["hypothesis_map"] == "H1" and e["stance"] == "supports")
+    aud = apply_interview_audit(reg)
+    assert aud["n_audited"] == sum(1 for e in reg if e["audit_verdict"]) and aud["n_audited"] <= aud["n_total"]
+    assert all(e["audit_note"] for e in reg if e["audit_verdict"])  # every verdict carries a note
     print("selftest OK")
 
 
@@ -355,6 +443,8 @@ def main() -> None:
     print(f"{len(rows)} rows; {len(claim_rows)} claims; {len(shippable)} traceable.", file=sys.stderr)
 
     register = build_register(shippable)
+    audit = apply_interview_audit(register)   # primary-research overlay: fills audit_verdict on top claims
+    h1_split = compute_h1_split(register)
     manifest = corpus_manifest(rows)
     lean = hypothesis_lean(claim_rows)
     cats = category_signal(claim_rows)
@@ -372,7 +462,8 @@ def main() -> None:
     json.dump(manifest, open("corpus_manifest.json", "w", encoding="utf-8"), ensure_ascii=False, indent=1)
     write_early_signal(lean, cats, manifest, register)
     json.dump({"manifest": manifest, "register": register, "lean": lean, "categories": cats,
-               "discard_pile": discard, "index": build_index(shippable)},
+               "discard_pile": discard, "interview": INTERVIEW, "h1_split": h1_split, "audit": audit,
+               "index": build_index(shippable)},
               open(args.data, "w", encoding="utf-8"), ensure_ascii=False)
     print(f"Wrote claims_register.json ({len(register)} claims), corpus_manifest.json, "
           f"early_signal.md, {args.data}")

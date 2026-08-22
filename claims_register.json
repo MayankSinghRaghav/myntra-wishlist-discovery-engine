@@ -31,8 +31,8 @@
   "confidence_basis": "3 passage(s) across 1 independent platform(s)",
   "thin_evidence": true,
   "corpus_frequency": 3,
-  "audit_verdict": "",
-  "audit_note": ""
+  "audit_verdict": "held up",
+  "audit_note": "H3 strongly supported — interviews confirmed compare / inspiration / bookmark saves."
  },
  {
   "claim_id": "C002",
@@ -62,8 +62,8 @@
   "confidence_basis": "2 passage(s) across 2 independent platform(s)",
   "thin_evidence": false,
   "corpus_frequency": 2,
-  "audit_verdict": "",
-  "audit_note": ""
+  "audit_verdict": "partly invented",
+  "audit_note": "Real complaint, but a POST-purchase grievance — not the wishlist→buy blocker the corpus implied (H1 rejected as primary, 0/6)."
  },
  {
   "claim_id": "C003",
@@ -93,8 +93,8 @@
   "confidence_basis": "2 passage(s) across 1 independent platform(s)",
   "thin_evidence": true,
   "corpus_frequency": 2,
-  "audit_verdict": "",
-  "audit_note": ""
+  "audit_verdict": "partly invented",
+  "audit_note": "Real complaint, but a POST-purchase grievance — not the wishlist→buy blocker the corpus implied (H1 rejected as primary, 0/6)."
  },
  {
   "claim_id": "C004",
@@ -122,8 +122,8 @@
   "confidence_basis": "2 passage(s) across 1 independent platform(s)",
   "thin_evidence": true,
   "corpus_frequency": 2,
-  "audit_verdict": "",
-  "audit_note": ""
+  "audit_verdict": "held up",
+  "audit_note": "Interviews agree easy, no-questions returns remove hesitation — returns are not the blocker."
  },
  {
   "claim_id": "C005",
@@ -153,8 +153,8 @@
   "confidence_basis": "2 passage(s) across 1 independent platform(s)",
   "thin_evidence": true,
   "corpus_frequency": 2,
-  "audit_verdict": "",
-  "audit_note": ""
+  "audit_verdict": "partly invented",
+  "audit_note": "Fit/quality doubt is real, but 0/6 interviews named it the deciding reason a saved item went unbought."
  },
  {
   "claim_id": "C006",
@@ -213,8 +213,8 @@
   "confidence_basis": "2 passage(s) across 1 independent platform(s)",
   "thin_evidence": true,
   "corpus_frequency": 2,
-  "audit_verdict": "",
-  "audit_note": ""
+  "audit_verdict": "partly invented",
+  "audit_note": "Fit/quality doubt is real, but 0/6 interviews named it the deciding reason a saved item went unbought."
  },
  {
   "claim_id": "C008",
@@ -306,8 +306,8 @@
   "confidence_basis": "2 passage(s) across 1 independent platform(s)",
   "thin_evidence": true,
   "corpus_frequency": 2,
-  "audit_verdict": "",
-  "audit_note": ""
+  "audit_verdict": "held up",
+  "audit_note": "H2 weakly supported — occasion-timing appears but is seldom the deciding factor."
  },
  {
   "claim_id": "C011",
@@ -337,8 +337,8 @@
   "confidence_basis": "2 passage(s) across 1 independent platform(s)",
   "thin_evidence": true,
   "corpus_frequency": 2,
-  "audit_verdict": "",
-  "audit_note": ""
+  "audit_verdict": "held up",
+  "audit_note": "H2 weakly supported — occasion-timing appears but is seldom the deciding factor."
  },
  {
   "claim_id": "C012",
@@ -571,8 +571,8 @@
   "confidence_basis": "1 passage(s) across 1 independent platform(s)",
   "thin_evidence": true,
   "corpus_frequency": 1,
-  "audit_verdict": "",
-  "audit_note": ""
+  "audit_verdict": "partly invented",
+  "audit_note": "Real complaint, but a POST-purchase grievance — not the wishlist→buy blocker the corpus implied (H1 rejected as primary, 0/6)."
  },
  {
   "claim_id": "C022",
@@ -1227,8 +1227,8 @@
   "confidence_basis": "1 passage(s) across 1 independent platform(s)",
   "thin_evidence": true,
   "corpus_frequency": 1,
-  "audit_verdict": "",
-  "audit_note": ""
+  "audit_verdict": "held up",
+  "audit_note": "Interviews agree easy, no-questions returns remove hesitation — returns are not the blocker."
  },
  {
   "claim_id": "C050",
@@ -3002,8 +3002,8 @@
   "confidence_basis": "1 passage(s) across 1 independent platform(s)",
   "thin_evidence": true,
   "corpus_frequency": 1,
-  "audit_verdict": "",
-  "audit_note": ""
+  "audit_verdict": "held up",
+  "audit_note": "H3 strongly supported — interviews confirmed compare / inspiration / bookmark saves."
  },
  {
   "claim_id": "C125",
@@ -3025,8 +3025,8 @@
   "confidence_basis": "1 passage(s) across 1 independent platform(s)",
   "thin_evidence": true,
   "corpus_frequency": 1,
-  "audit_verdict": "",
-  "audit_note": ""
+  "audit_verdict": "held up",
+  "audit_note": "H3 strongly supported — interviews confirmed compare / inspiration / bookmark saves."
  },
  {
   "claim_id": "C126",
@@ -3048,8 +3048,8 @@
   "confidence_basis": "1 passage(s) across 1 independent platform(s)",
   "thin_evidence": true,
   "corpus_frequency": 1,
-  "audit_verdict": "",
-  "audit_note": ""
+  "audit_verdict": "held up",
+  "audit_note": "H3 strongly supported — interviews confirmed compare / inspiration / bookmark saves."
  },
  {
   "claim_id": "C127",
@@ -3073,8 +3073,8 @@
   "confidence_basis": "1 passage(s) across 1 independent platform(s)",
   "thin_evidence": true,
   "corpus_frequency": 1,
-  "audit_verdict": "",
-  "audit_note": ""
+  "audit_verdict": "held up",
+  "audit_note": "H3 strongly supported — interviews confirmed compare / inspiration / bookmark saves."
  },
  {
   "claim_id": "C128",

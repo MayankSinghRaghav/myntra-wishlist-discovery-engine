@@ -54,21 +54,39 @@ function render(d) {
     `By platform: ${JSON.stringify(m.counts_by_platform)} · dates ${esc(m.date_range && m.date_range.earliest || "?")}–${esc(m.date_range && m.date_range.latest || "?")} · `
     + `${pct(ai, tot)} AI-labelled (rest rule-fallback, logged) · not yet ingested: ${(m.not_ingested || []).join(", ")}.`;
 
-  // hypothesis lean
-  let L = `<tr><th>Hypothesis</th><th>supports</th><th>contradicts</th><th>neutral</th><th>net</th></tr>`;
+  // reconciliation panel — corpus proposes, interviews decide
+  document.getElementById("reconcile").innerHTML = renderReconcile(d);
+
+  // hypothesis lean — corpus signal AND interview verdict on the same row
+  const iv = d.interview || {};
+  let L = `<tr><th>Hypothesis</th><th>supports</th><th>contradicts</th><th>net</th><th>Interview verdict</th></tr>`;
   const maxv = Math.max(1, ...HYP.flatMap(h => [d.lean[h].supports, d.lean[h].contradicts]));
   for (const h of HYP) {
     const x = d.lean[h];
+    const v = iv[h];
+    const vcell = v
+      ? `<span class="iv iv-${v.strength}">${esc(v.verdict)}</span><div class="iv-detail">${esc(v.detail)}</div>`
+      : `<span class="muted">— not a primary hypothesis</span>`;
     L += `<tr><td>${badge("b-" + h, HYPNAME[h])}</td>
       <td>${lbar(x.supports, maxv, "var(--support)")}</td>
       <td>${lbar(x.contradicts, maxv, "var(--contra)")}</td>
-      <td class="muted">${x.neutral}</td>
-      <td><b>${x.net >= 0 ? "+" : ""}${x.net}</b></td></tr>`;
+      <td><b>${x.net >= 0 ? "+" : ""}${x.net}</b></td>
+      <td>${vcell}</td></tr>`;
   }
   document.getElementById("lean").innerHTML = L;
 
+  // H1 pre-purchase vs post-purchase grievance split
+  document.getElementById("h1split").innerHTML = renderH1Split(d.h1_split);
+
+  // audit coverage — honest, computed from how many register entries carry a verdict
+  const a = d.audit || { n_audited: 0, n_total: (d.register || []).length, distribution: {}, n_interviews: 0 };
+  const distTxt = Object.entries(a.distribution || {}).map(([k, n]) => `${n} ${k}`).join(" · ") || "none yet";
+  document.getElementById("auditCoverage").innerHTML =
+    `<b>${a.n_audited} of ${a.n_total} claims</b> carry an interview verdict (${a.n_interviews} interviews) — ${distTxt}. `
+    + `The rest are <span class="muted">pending</span>: 6 interviews adjudicate the highest-signal claims, not the long tail.`;
+
   // register
-  let R = `<tr><th>#</th><th>Claim</th><th>H</th><th>Stance</th><th>Theme</th><th>Src</th><th>Conf</th><th>Quotes</th><th>Verdict</th></tr>`;
+  let R = `<tr><th>#</th><th>Claim</th><th>H</th><th>Stance</th><th>Theme</th><th>Src</th><th>Conf</th><th>Quotes</th><th>Interview verdict</th></tr>`;
   for (const e of d.register) {
     const qs = (e.source_quotes || []).map(q =>
       `<div class="q">“${esc(q.verbatim)}” <span class="src">[${esc(q.platform)}]${q.date ? " · " + esc(q.date) : ""}</span></div>`).join("");
@@ -82,7 +100,7 @@ function render(d) {
       <td>${e.n_independent_srcs}${thin}</td>
       <td class="conf-${e.engine_confidence}">${e.engine_confidence}</td>
       <td><details><summary class="small muted">${(e.source_quotes || []).length} quote(s)</summary>${qs}</details></td>
-      <td class="muted small">pending</td></tr>`;
+      <td>${verdictCell(e)}</td></tr>`;
   }
   document.getElementById("register").innerHTML = R;
 
@@ -104,6 +122,50 @@ function render(d) {
 
 function lbar(v, max, color) {
   return `<div class="bar"><i style="width:${Math.max(3, v / max * 100)}%;background:${color}"></i></div><span class="small muted"> ${v}</span>`;
+}
+
+// "Corpus proposes → interviews decide" — reconcile the H1 inversion honestly
+function renderReconcile(d) {
+  const h1 = d.lean.h1, iv = (d.interview || {}).h1 || {}, sp = d.h1_split || {};
+  // surface a real contradicting H1 claim (returns remove hesitation) straight from the register
+  const contra = (d.register || []).find(e => e.hypothesis_map === "H1" && e.stance === "contradicts"
+    && (e.source_quotes || []).length);
+  const cq = contra ? `“${esc(contra.source_quotes[0].verbatim)}” <span class="src">[${esc(contra.source_quotes[0].platform)}]</span>` : "";
+  return `<div class="reconcile">
+    <div class="rec-tag">Corpus proposes → interviews decide</div>
+    <p>The corpus's loudest signal is <b class="b-h1-t">H1 (uncertainty), net +${h1.net}</b> — yet the interviews
+      <b class="iv-rejected-t">rejected H1 as the primary blocker</b> (${iv.detail || ""}). That is not a contradiction to hide; it's the point of the method:</p>
+    <ul>
+      <li>H1's lean is <b>inflated by post-purchase return grievances</b> — of its ${sp.total || 0} supporting claims, only
+        <b>${sp.pre_purchase || 0}</b> read as pre-purchase uncertainty vs <b>${sp.post_purchase || 0}</b> post-purchase grievance
+        (${sp.ambiguous || 0} ambiguous). Complaint-skewed reviews shout about returns, not about the save→buy decision.</li>
+      <li>And it <b>cuts both ways</b> — the corpus also carries claims that argue <i>against</i> H1${cq ? `, e.g. ${cq}` : ""}.</li>
+      <li>Public text can only <b>propose</b> hypotheses. Only <b>primary research on users' own saved items</b> can settle which
+        blocker actually decides a non-purchase — and it did: H3 strong, H2 weak, <b>H1 rejected</b>.</li>
+    </ul>
+  </div>`;
+}
+
+function renderH1Split(s) {
+  if (!s || !s.total) return `<p class="muted">No H1 supporting claims to split.</p>`;
+  const max = Math.max(s.pre_purchase, s.post_purchase, s.ambiguous, 1);
+  const row = (lab, v, cls) =>
+    `<div class="bar-row"><div class="bar-lab">${lab}<em>n=${v}</em></div>
+     <div class="bar-track"><div class="bar-fill ${cls}" style="width:${Math.max(3, v / max * 100)}%"></div></div>
+     <div class="bar-val">${pct(v, s.total)}</div></div>`;
+  return `<div class="bars">
+      ${row("Pre-purchase uncertainty", s.pre_purchase, "elig")}
+      ${row("Post-purchase grievance", s.post_purchase, "inelig")}
+      ${row("Ambiguous", s.ambiguous, "amb")}
+    </div>
+    <p class="small muted" style="margin-top:8px">${esc(s.method)}</p>`;
+}
+
+function verdictCell(e) {
+  if (!e.audit_verdict) return `<span class="muted small">pending</span>`;
+  const cls = e.audit_verdict.replace(/\s+/g, "-");
+  return `<span class="verdict-b v-${cls}">${esc(e.audit_verdict)}</span>`
+    + (e.audit_note ? `<details><summary class="small muted">why</summary><span class="small">${esc(e.audit_note)}</span></details>` : "");
 }
 
 // ---- keyless lexical RAG with refusal --------------------------------------

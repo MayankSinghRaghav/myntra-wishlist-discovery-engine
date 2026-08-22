@@ -36,6 +36,29 @@
   .answer{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:10px 14px}
   .muted{color:var(--muted)} .small{font-size:13px} details{margin-top:4px}
   code{background:var(--panel);padding:1px 5px;border-radius:4px}
+  /* reconciliation panel */
+  .reconcile{border:1px solid #f0c9d0;background:linear-gradient(180deg,#fff6f8,#ffffff);
+    border-left:4px solid var(--h3);border-radius:12px;padding:14px 18px;margin:18px 0 6px}
+  .rec-tag{display:inline-block;font-size:12px;font-weight:800;letter-spacing:.03em;color:#fff;
+    background:var(--h3);border-radius:20px;padding:3px 12px;margin-bottom:8px}
+  .reconcile ul{margin:8px 0 0;padding-left:18px} .reconcile li{margin:6px 0;font-size:14px}
+  .b-h1-t{color:var(--h1)} .iv-rejected-t{color:var(--contra)}
+  /* interview verdict chips (in lean table) */
+  .iv{display:inline-block;font-size:12px;font-weight:800;border-radius:6px;padding:2px 8px;color:#fff}
+  .iv-strong{background:var(--support)} .iv-weak{background:var(--h2)} .iv-rejected{background:var(--contra)}
+  .iv-detail{font-size:11px;color:var(--muted);margin-top:3px;max-width:230px}
+  /* per-claim audit verdict badges */
+  .verdict-b{display:inline-block;font-size:11px;font-weight:800;border-radius:6px;padding:2px 7px;color:#fff;white-space:nowrap}
+  .v-held-up{background:var(--support)} .v-partly-invented{background:var(--h2)} .v-rejected{background:var(--contra)}
+  /* H1-split horizontal bars */
+  .bars{display:flex;flex-direction:column;gap:10px;margin-top:6px}
+  .bar-row{display:grid;grid-template-columns:150px 1fr 46px;align-items:center;gap:8px}
+  .bar-lab{font-size:12.5px;font-weight:600;color:var(--ink)}
+  .bar-lab em{display:block;font-style:normal;font-size:10.5px;color:var(--muted);font-weight:400}
+  .bar-track{background:var(--panel);border-radius:6px;height:22px;overflow:hidden}
+  .bar-fill{height:100%;border-radius:6px}
+  .bar-fill.elig{background:var(--h1)} .bar-fill.inelig{background:var(--contra)} .bar-fill.amb{background:#c9cbd3}
+  .bar-val{font-size:12.5px;font-weight:700;text-align:right}
 </style>
 </head>
 <body>
@@ -49,18 +72,24 @@
      <span class="tag">closed taxonomy</span>
      <span class="tag">every claim traceable to a verbatim quote</span></p>
 
+  <div id="reconcile"></div>
+
   <h2>Corpus <span class="small muted">(slide-3 size — honest counts)</span></h2>
   <div class="stats" id="stats"></div>
   <p class="small muted" id="manifestLine"></p>
 
-  <h2>Hypothesis lean <span class="small muted">— supports vs contradicts (corpus-only, pre-interview)</span></h2>
-  <p class="small muted">Contradicting evidence is kept, never collapsed — a tall red bar is the engine helping to
-     <b>kill</b> a hypothesis. This is a lean, not a verdict.</p>
+  <h2>Hypothesis lean <span class="small muted">— corpus signal <b>vs</b> interview verdict, together</span></h2>
+  <p class="small muted">The corpus <b>proposes</b> (supports − contradicts); the interviews <b>decide</b>. Both are shown
+     on the same row so the tool never appears to support a hypothesis the interviews rejected.</p>
   <table id="lean"></table>
 
-  <h2>Claim register <span class="small muted">— ranked; feeds the slide-4 audit table</span></h2>
-  <p class="small muted">Verdict (Held up / Partly invented / Rejected) is filled later from blind interviews. Every
-     claim is re-openable to its verbatim quote + URL.</p>
+  <h2>H1: pre-purchase uncertainty vs post-purchase grievance</h2>
+  <p class="small muted">Why H1's corpus lean is inflated — how much of its support is actually about the save→buy
+     decision vs. complaints about a completed purchase.</p>
+  <div id="h1split"></div>
+
+  <h2>Claim register <span class="small muted">— ranked; per-claim audit verdicts</span></h2>
+  <p class="small" id="auditCoverage"></p>
   <table id="register"></table>
 
   <h2>Segment signal <span class="small muted">— for the interview screener</span></h2>
