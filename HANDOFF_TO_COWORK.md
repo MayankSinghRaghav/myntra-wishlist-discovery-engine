@@ -1,7 +1,7 @@
 # Discovery Engine → Cowork handoff (Build 1 output for deck slides 3–4)
 
 **Repo:** github.com/MayankSinghRaghav/myntra-wishlist-discovery-engine (public, all prompts visible)
-**Live URL:** _pending Vercel deploy (Mayank to connect the repo — static, no build)._
+**Live URL:** https://myntra-discovery-engine-mayanksinghraghavs-projects.vercel.app (interview verdicts now shown inline with corpus lean)
 **Generated against:** `hypotheses.md` FROZEN 2026-08-20 07:20 IST. Classification ran AFTER the
 freeze commit — pre-registration intact.
 
