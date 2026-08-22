@@ -23,8 +23,16 @@ const pct = (n, d) => d ? Math.round(n / d * 100) + "%" : "0%";
 const esc = s => String(s == null ? "" : s).replace(/[&<>"]/g, c => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;"}[c]));
 
 let DATA = null, DF = null;   // DF: term -> number of index docs containing it
-fetch("data.json").then(r => r.json()).then(d => { DATA = d; buildDF(d); render(d); })
-  .catch(() => document.getElementById("stats").textContent = "Could not load data.json — run analyze.py.");
+// data is inlined into the page (id="appdata") so the deployed site makes NO external requests
+// — ad-blockers block generic root-level files like /app.js. Fall back to fetch for local dev.
+(function () {
+  const el = document.getElementById("appdata");
+  const load = el ? Promise.resolve(JSON.parse(el.textContent))
+                  : fetch("data.json").then((r) => r.json());
+  load.then((d) => { DATA = d; buildDF(d); render(d); })
+      .catch(() => { document.getElementById("stats").textContent =
+        "Could not load data — run analyze.py then build_static.py."; });
+})();
 
 function buildDF(d) {
   DF = Object.create(null);
