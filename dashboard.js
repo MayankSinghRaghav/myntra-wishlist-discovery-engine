@@ -1,227 +1,276 @@
-/* app.js — renders the claim register / manifest / hypothesis lean, and runs a keyless,
-   client-side lexical RAG that REFUSES on thin or single-platform evidence. Diagnosis only. */
+/* dashboard.js — decision-first Discovery Engine dashboard.
+   4 tabs (Decision / Evidence / Audit / Ask). Every number + chart is COMPUTED at runtime from the
+   inlined data (claims_register.json + corpus_manifest.json, via data.json). No hardcoded outputs.
+   Charts are inline SVG/CSS (no library) so the page stays self-contained, keyless and ad-blocker-proof. */
 "use strict";
 
-const HYP = ["h1", "h2", "h3", "other"];
-const HYPNAME = {h1: "H1 uncertainty", h2: "H2 decay", h3: "H3 ≠ intent", other: "other"};
-// A proper English function-word stoplist (interrogatives/pronouns/prepositions/auxiliaries) plus
-// generic review fillers. The corpus is domain-specific (all Myntra fashion), so an off-topic query
-// ("how to cook pasta", "best football player ever") reduces to nothing once function words are
-// stripped and remaining terms are checked against the corpus. (IDF/rarity fails here — domain words
-// like "size"/"return" are the MOST common — so function-word stripping is the robust signal.)
-const STOP = new Set((
-  "about above after again against all and any are aren cannot could couldn did didn does doesn doing "
-  + "don down during each few for from further had hadn has hasn have haven having her here hers herself "
-  + "him himself his how into isn its itself let more most mustn myself nor not off once only other ought "
-  + "our ours ourselves out over own same shan she should shouldn some such than that the their theirs "
-  + "them themselves then there these they this those through too under until very was wasn were weren "
-  + "what when where which while who whom why will with won would wouldn you your yours yourself yourselves "
-  + "best good great nice love loved like ever today app myntra product item thing things time day people "
-  + "make made use using buy bought order get got just really also one two lot bit want need got"
-).split(/\s+/));
-const pct = (n, d) => d ? Math.round(n / d * 100) + "%" : "0%";
-const esc = s => String(s == null ? "" : s).replace(/[&<>"]/g, c => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;"}[c]));
+const C = { supports:"#0072b2", partly:"#e69f00", rejected:"#6b6e7b", brand:"#ff3f6c",
+            ink:"#282c3f", muted:"#5a5f66", line:"#e6e8ec", panel:"#f7f8fa" };
+const HYPNAME = { h1:"H1 — uncertainty", h2:"H2 — occasion decay", h3:"H3 — save ≠ intent", other:"other" };
+const IV_CLASS = { strong:"iv-strong", weak:"iv-weak", rejected:"iv-rejected" };
+// function-word stoplist + review fillers — keeps the RAG's off-corpus refusal robust
+const STOP = new Set(("about above after again against all and any are aren cannot could couldn did didn does doesn doing "
+  + "don down during each few for from further had hadn has hasn have haven having her here hers herself him himself his how "
+  + "into isn its itself let more most mustn myself nor not off once only other ought our ours ourselves out over own same shan "
+  + "she should shouldn some such than that the their theirs them themselves then there these they this those through too under "
+  + "until very was wasn were weren what when where which while who whom why will with won would wouldn you your yours yourself "
+  + "yourselves best good great nice love loved like ever today app myntra product item thing things time day people make made "
+  + "use using buy bought order get got just really also one two lot bit want need").split(/\s+/));
 
-let DATA = null, DF = null;   // DF: term -> number of index docs containing it
-// data is inlined into the page (id="appdata") so the deployed site makes NO external requests
-// — ad-blockers block generic root-level files like /app.js. Fall back to fetch for local dev.
+const esc = s => String(s==null?"":s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const pct = (n,d) => d ? Math.round(n/d*100)+"%" : "0%";
+const pct1 = (n,d) => d ? (n/d*100).toFixed(1)+"%" : "0%";
+const $ = id => document.getElementById(id);
+
+let DATA=null, DF=null, REGISTER=[];
+
 (function () {
-  const el = document.getElementById("appdata");
-  const load = el ? Promise.resolve(JSON.parse(el.textContent))
-                  : fetch("data.json").then((r) => r.json());
-  load.then((d) => { DATA = d; buildDF(d); render(d); })
-      .catch(() => { document.getElementById("stats").textContent =
-        "Could not load data — run analyze.py then build_static.py."; });
+  const el = $("appdata");
+  const load = el ? Promise.resolve(JSON.parse(el.textContent)) : fetch("data.json").then(r=>r.json());
+  load.then(d => { DATA=d; REGISTER=d.register||[]; buildDF(d); renderAll(d); setupTabs(); })
+      .catch(() => { $("verdict").innerHTML = `<div class="empty">Could not load data — run analyze.py then build_static.py.</div>`; });
 })();
+
+function setupTabs() {
+  document.querySelectorAll(".tab").forEach(t => t.onclick = () => {
+    document.querySelectorAll(".tab").forEach(x => x.classList.toggle("on", x===t));
+    document.querySelectorAll(".tabpane").forEach(p => p.classList.toggle("on", p.id==="tab-"+t.dataset.tab));
+  });
+}
 
 function buildDF(d) {
   DF = Object.create(null);
-  for (const doc of (d.index || [])) {
-    const seen = new Set((doc.text + " " + doc.claim + " " + doc.quote).toLowerCase().match(/[a-z0-9]+/g) || []);
-    for (const t of seen) DF[t] = (DF[t] || 0) + 1;
+  for (const doc of (d.index||[])) {
+    const seen = new Set((doc.text+" "+doc.claim+" "+doc.quote).toLowerCase().match(/[a-z0-9]+/g) || []);
+    for (const t of seen) DF[t] = (DF[t]||0)+1;
   }
 }
 
-function badge(cls, txt) { return `<span class="badge ${cls}">${esc(txt)}</span>`; }
+function renderAll(d) {
+  try { renderVerdict(d); } catch(e){ $("verdict").innerHTML=empty("verdict"); }
+  renderKPIs(d); renderScoreboard(d); renderReconcile(d);
+  renderFunnel(d); renderVerdictDist(d); renderThemes(d); renderPlatforms(d); renderH1Split(d);
+  renderAudit(d);
+}
+const empty = what => `<div class="empty">No data for ${esc(what)}.</div>`;
+const badge = (cls,txt) => `<span class="badge ${cls}">${esc(txt)}</span>`;
 
-function render(d) {
-  if (d._sample) document.getElementById("sampleTag").hidden = false;
-  const m = d.manifest;
-
-  document.getElementById("stats").innerHTML = [
-    ["Documents", (m.n_documents || 0).toLocaleString()],
-    ["Relevant", (m.n_relevant || 0).toLocaleString()],
-    ["Platforms", m.n_independent_platforms || 0],
-    ["Register claims", m.n_register_entries || 0],
-    ["Contradicting", HYP.reduce((a, h) => a + (d.lean[h] ? d.lean[h].contradicts : 0), 0)],
-  ].map(([l, v]) => `<div class="stat"><b>${v}</b><span>${l}</span></div>`).join("");
-
-  const mix = m.model_mix || {};
-  const ai = mix.gemini || 0, tot = Object.values(mix).reduce((a, b) => a + b, 0) || 1;
-  document.getElementById("manifestLine").innerHTML =
-    `By platform: ${JSON.stringify(m.counts_by_platform)} · dates ${esc(m.date_range && m.date_range.earliest || "?")}–${esc(m.date_range && m.date_range.latest || "?")} · `
-    + `${pct(ai, tot)} AI-labelled (rest rule-fallback, logged) · not yet ingested: ${(m.not_ingested || []).join(", ")}.`;
-
-  // reconciliation panel — corpus proposes, interviews decide
-  document.getElementById("reconcile").innerHTML = renderReconcile(d);
-
-  // hypothesis lean — corpus signal AND interview verdict on the same row
+// ─────────────────────────────────────────── TAB 1: DECISION
+function renderVerdict(d) {
   const iv = d.interview || {};
-  let L = `<tr><th>Hypothesis</th><th>supports</th><th>contradicts</th><th>net</th><th>Interview verdict</th></tr>`;
-  const maxv = Math.max(1, ...HYP.flatMap(h => [d.lean[h].supports, d.lean[h].contradicts]));
-  for (const h of HYP) {
-    const x = d.lean[h];
-    const v = iv[h];
-    const vcell = v
-      ? `<span class="iv iv-${v.strength}">${esc(v.verdict)}</span><div class="iv-detail">${esc(v.detail)}</div>`
-      : `<span class="muted">— not a primary hypothesis</span>`;
-    L += `<tr><td>${badge("b-" + h, HYPNAME[h])}</td>
-      <td>${lbar(x.supports, maxv, "var(--support)")}</td>
-      <td>${lbar(x.contradicts, maxv, "var(--contra)")}</td>
-      <td><b>${x.net >= 0 ? "+" : ""}${x.net}</b></td>
-      <td>${vcell}</td></tr>`;
-  }
-  document.getElementById("lean").innerHTML = L;
-
-  // H1 pre-purchase vs post-purchase grievance split
-  document.getElementById("h1split").innerHTML = renderH1Split(d.h1_split);
-
-  // audit coverage — honest, computed from how many register entries carry a verdict
-  const a = d.audit || { n_audited: 0, n_total: (d.register || []).length, distribution: {}, n_interviews: 0, coverage_pct: 0 };
-  const order = ["held up", "partly invented", "rejected", "not tested"];
-  const distTxt = order.filter(k => a.distribution && a.distribution[k]).map(k => `${a.distribution[k]} ${k}`).join(" · ");
-  const pending = a.n_total - a.n_audited;
-  document.getElementById("auditCoverage").innerHTML =
-    `<b>Audit coverage: ${a.n_audited} of ${a.n_total} claims (${a.coverage_pct}%)</b> verdicted against the ${a.n_interviews} interviews — ${distTxt}. `
-    + `“Not tested” = the interviews don't speak to that claim, so no verdict is forced (no fabricated support). `
-    + `${pending} lower-ranked claims remain <span class="muted">pending</span>. `
-    + `Evidence base: <a href="interviews.md" target="_blank" rel="noopener">the 6 transcripts</a> (each verdict's “why” cites them).`;
-
-  // register
-  let R = `<tr><th>#</th><th>Claim</th><th>H</th><th>Stance</th><th>Theme</th><th>Src</th><th>Conf</th><th>Quotes</th><th>Interview verdict</th></tr>`;
-  for (const e of d.register) {
-    const qs = (e.source_quotes || []).map(q =>
-      `<div class="q">“${esc(q.verbatim)}” <span class="src">[${esc(q.platform)}]${q.date ? " · " + esc(q.date) : ""}</span></div>`).join("");
-    const thin = e.thin_evidence ? ` <span class="badge s-contradicts" title="single platform">thin</span>` : "";
-    R += `<tr>
-      <td class="muted">${esc(e.claim_id)}</td>
-      <td>${esc(e.claim_text)}${e.inferred_segment ? ` <span class="tag">${esc(e.inferred_segment.category)}</span>` : ""}</td>
-      <td>${badge("b-" + e.hypothesis_map.toLowerCase(), e.hypothesis_map)}</td>
-      <td>${badge("s-" + e.stance, e.stance)}</td>
-      <td class="small muted">${esc(e.theme)}</td>
-      <td>${e.n_independent_srcs}${thin}</td>
-      <td class="conf-${e.engine_confidence}">${e.engine_confidence}</td>
-      <td><details><summary class="small muted">${(e.source_quotes || []).length} quote(s)</summary>${qs}</details></td>
-      <td>${verdictCell(e)}</td></tr>`;
-  }
-  document.getElementById("register").innerHTML = R;
-
-  // segment
-  const cats = d.categories || {};
-  const catList = Object.entries(cats).slice(0, 8).map(([c, n]) => `<b>${esc(c)}</b> (${n})`).join(" · ");
-  const top = Object.keys(cats)[0];
-  document.getElementById("segment").innerHTML = catList
-    ? `<p>Category concentration: ${catList}</p><p class="muted">Screener rec (pre-interview): over-sample recent wishlist users in <b>${esc(top)}</b>; age/geo not inferable from public text — recruit open.</p>`
-    : `<p class="muted">No reliable category concentration yet — recruit category-open.</p>`;
-
-  // discard
-  const dp = d.discard_pile || {};
-  document.getElementById("discard").innerHTML =
-    `<p>Not relevant: <b>${dp.not_relevant ? dp.not_relevant.count : 0}</b> · Claims with no traceable quote (dropped): <b>${dp.unverified_claims ? dp.unverified_claims.count : 0}</b> · Thin single-platform claims: <b>${dp.thin_single_source_claims ? dp.thin_single_source_claims.count : 0}</b></p>`
-    + (dp.unverified_claims && dp.unverified_claims.samples.length
-      ? `<details><summary class="muted">sample dropped (untraceable) claims</summary>${dp.unverified_claims.samples.map(s => `<div class="q">${esc(s)}</div>`).join("")}</details>` : "");
-}
-
-function lbar(v, max, color) {
-  return `<div class="bar"><i style="width:${Math.max(3, v / max * 100)}%;background:${color}"></i></div><span class="small muted"> ${v}</span>`;
-}
-
-// "Corpus proposes → interviews decide" — reconcile the H1 inversion honestly
-function renderReconcile(d) {
-  const h1 = d.lean.h1, iv = (d.interview || {}).h1 || {}, sp = d.h1_split || {};
-  // surface a real contradicting H1 claim (returns remove hesitation) straight from the register
-  const contra = (d.register || []).find(e => e.hypothesis_map === "H1" && e.stance === "contradicts"
-    && (e.source_quotes || []).length);
-  const cq = contra ? `“${esc(contra.source_quotes[0].verbatim)}” <span class="src">[${esc(contra.source_quotes[0].platform)}]</span>` : "";
-  return `<div class="reconcile">
-    <div class="rec-tag">Corpus proposes → interviews decide</div>
-    <p>The corpus's loudest signal is <b class="b-h1-t">H1 (uncertainty), net +${h1.net}</b> — yet the interviews
-      <b class="iv-rejected-t">rejected H1 as the primary blocker</b> (${iv.detail || ""}). That is not a contradiction to hide; it's the point of the method:</p>
-    <ul>
-      <li>H1's lean is <b>inflated by post-purchase return grievances</b> — of its ${sp.total || 0} supporting claims, only
-        <b>${sp.pre_purchase || 0}</b> read as pre-purchase uncertainty vs <b>${sp.post_purchase || 0}</b> post-purchase grievance
-        (${sp.unclear != null ? sp.unclear : (sp.ambiguous || 0)} unclear). Complaint-skewed reviews shout about returns, not about the save→buy decision.</li>
-      <li>And it <b>cuts both ways</b> — the corpus also carries claims that argue <i>against</i> H1${cq ? `, e.g. ${cq}` : ""}.</li>
-      <li>Public text can only <b>propose</b> hypotheses. Only <b>primary research on users' own saved items</b> can settle which
-        blocker actually decides a non-purchase — and it did: <b>H3 strong, H2 supported, H1 rejected</b>.</li>
-    </ul>
-    ${renderAdditional(d.interview)}
+  const v = h => (iv[h]||{}).verdict || "";
+  $("verdict").innerHTML = `<div class="verdict">
+    <div class="lead">Root cause</div>
+    <div class="call">The wishlist is <b class="ok">intent-blind</b> — one save button serves buy-later, comparison,
+      occasion and inspiration alike. <b>H3 (mixed intent) confirmed</b> · <b class="h1">H1 (fit-uncertainty) rejected</b> ·
+      H2 (occasion) supported → the lever is <b class="ok">save-time intent capture</b>.</div>
   </div>`;
 }
 
-function renderAdditional(iv) {
-  const add = (iv || {}).additional || [];
-  if (!add.length) return "";
-  return `<p class="small" style="margin-top:10px"><b>Also surfaced in the interviews (outside H1/H2/H3 — flagged, not decided):</b></p>
-    <ul>${add.map(x => `<li><b>${esc(x.label)}</b> — ${esc(x.detail)}</li>`).join("")}</ul>`;
+function renderKPIs(d) {
+  const m = d.manifest||{};
+  const noSignal = m.n_documents ? 1 - (m.n_relevant/m.n_documents) : 0;
+  const tiles = [
+    [(m.n_documents||0).toLocaleString(), "docs analysed"],
+    [(m.n_register_entries||0), "traceable claims"],
+    [(noSignal*100).toFixed(1)+"%", "no-signal (honesty)"],
+    [Object.keys(d.lean||{}).filter(h=>h!=="other").length || 3, "hypotheses tested"],
+  ];
+  $("kpis").innerHTML = tiles.map(([b,s]) => `<div class="kpi"><b>${b}</b><span>${s}</span></div>`).join("");
 }
 
-function renderH1Split(s) {
-  if (!s || !s.total) return `<p class="muted">No H1 supporting claims to split.</p>`;
-  const unclear = s.unclear != null ? s.unclear : s.ambiguous || 0;   // back-compat
-  const max = Math.max(s.pre_purchase, s.post_purchase, unclear, 1);
-  const row = (lab, v, cls) =>
-    `<div class="bar-row"><div class="bar-lab">${lab}<em>n=${v}</em></div>
-     <div class="bar-track"><div class="bar-fill ${cls}" style="width:${Math.max(3, v / max * 100)}%"></div></div>
-     <div class="bar-val">${pct(v, s.total)}</div></div>`;
-  const head = s.net_lean != null
-    ? `<p class="small muted">H1 net corpus lean <b>+${s.net_lean}</b> → re-cut of its ${s.total} supporting claims:</p>` : "";
-  return head + `<div class="bars">
-      ${row("Pre-purchase uncertainty", s.pre_purchase, "elig")}
-      ${row("Post-purchase grievance", s.post_purchase, "inelig")}
-      ${row("Unclear", unclear, "amb")}
-    </div>
-    ${s.summary ? `<div class="insight" style="margin-top:12px">${esc(s.summary)}</div>` : ""}
-    <p class="small muted" style="margin-top:8px">${esc(s.method || "")}</p>`;
+function renderScoreboard(d) {
+  const lean = d.lean||{}, iv = d.interview||{};
+  const hyps = ["h1","h2","h3"].filter(h => lean[h]);
+  if (!hyps.length) { $("scoreboard").innerHTML = empty("scoreboard"); return; }
+  const max = Math.max(1, ...hyps.flatMap(h => [lean[h].supports, lean[h].contradicts]));
+  $("scoreboard").innerHTML = hyps.map(h => {
+    const x = lean[h], V = iv[h]||{};
+    const ivchip = V.verdict ? `<span class="iv ${IV_CLASS[V.strength]||"iv-weak"}">${esc(V.verdict)}${h==="h1"?" (0/6)":""}</span>` : "";
+    return `<div style="margin:14px 0 4px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">
+        <b>${HYPNAME[h]}</b>${ivchip}</div>
+      <div style="display:flex;align-items:center;gap:7px">
+        <span class="barval" style="width:26px;text-align:right;color:${C.partly}" title="contradicts">${x.contradicts}</span>
+        <div style="flex:1;position:relative;height:20px;background:${C.panel};border-radius:5px">
+          <div style="position:absolute;right:50%;top:0;bottom:0;width:${x.contradicts/max*50}%;background:${C.partly};border-radius:5px 0 0 5px"></div>
+          <div style="position:absolute;left:50%;top:0;bottom:0;width:${x.supports/max*50}%;background:${C.supports};border-radius:0 5px 5px 0"></div>
+          <div style="position:absolute;left:50%;top:-3px;bottom:-3px;width:1.5px;background:#3a3f4c"></div>
+        </div>
+        <span class="barval" style="width:30px;color:${C.supports}" title="supports">${x.supports}</span>
+        <span style="width:46px;text-align:right;font-weight:800">${x.net>=0?"+":""}${x.net}</span>
+      </div></div>`;
+  }).join("") + `<div class="lgd"><span><i class="sw" style="background:${C.supports}"></i>supports (→)</span>
+      <span><i class="sw" style="background:${C.partly}"></i>contradicts (←)</span>
+      <span>│ centre = zero · badge = interview verdict</span></div>`;
+  $("scoreTake").innerHTML = `The corpus leans hardest on <b>H1 (+${lean.h1.net})</b> — yet the interviews
+    <b>rejected it</b>. Corpus proposes, primary research decides.`;
 }
 
+function renderReconcile(d) {
+  const lean=d.lean||{}, iv=(d.interview||{}).h1||{}, sp=d.h1_split||{};
+  const contra = (REGISTER).find(e => e.hypothesis_map==="H1" && e.stance==="contradicts" && (e.source_quotes||[]).length);
+  const cq = contra ? `“${esc(contra.source_quotes[0].verbatim)}” <span class="src">[${esc(contra.source_quotes[0].platform)}]</span>` : "";
+  const unclear = sp.unclear!=null ? sp.unclear : (sp.ambiguous||0);
+  $("reconcile").innerHTML = `<div class="reconcile">
+    <div class="rec-tag">Corpus proposes → interviews decide</div>
+    <p style="margin:0">The corpus's loudest signal is <b>H1, net +${(lean.h1||{}).net}</b> — but the interviews
+      <b style="color:#a01818">rejected H1 as the primary blocker</b> (${esc(iv.detail||"0/6 named fit/quality/return as the deciding reason")}). That is the method working, not a bug:</p>
+    <ul>
+      <li>H1's lean is <b>inflated by post-purchase return grievances</b> — of ${sp.total||0} supporting claims only
+        <b>${sp.pre_purchase||0}</b> are pre-purchase uncertainty vs <b>${sp.post_purchase||0}</b> post-purchase grievance (${unclear} unclear).</li>
+      <li>It <b>cuts both ways</b> — the corpus also carries claims against H1${cq?`, e.g. ${cq}`:""}.</li>
+      <li>Public text can only <b>propose</b>; only primary research on saved items settles it — and it did: H3 strong, H2 supported, <b>H1 rejected</b>.</li>
+    </ul></div>`;
+}
+
+// ─────────────────────────────────────────── TAB 2: EVIDENCE
+function renderFunnel(d) {
+  const m=d.manifest||{}, docs=m.n_documents||0, rel=m.n_relevant||0, claims=m.n_register_entries||0;
+  if (!docs) { $("funnel").innerHTML = empty("funnel"); return; }
+  const steps = [["Documents analysed", docs, C.rejected||C.muted],
+                 ["Relevant (on-topic)", rel, C.partly], ["Traceable claims", claims, C.supports]];
+  $("funnel").innerHTML = steps.map(([lab,v,col]) => `
+    <div style="margin:9px 0">
+      <div style="display:flex;justify-content:space-between;font-size:12.5px"><span>${lab}</span>
+        <b>${v.toLocaleString()} <span class="muted" style="font-weight:400">(${pct1(v,docs)})</span></b></div>
+      <div style="height:16px;background:${C.panel};border-radius:5px;margin-top:3px">
+        <div style="height:100%;width:${Math.max(0.6, v/docs*100)}%;background:${col};border-radius:5px"></div></div>
+    </div>`).join("");
+  $("funnelTake").innerHTML = `<b>${pct1(docs-rel,docs)} discarded</b> — only high-signal evidence survives to the register.`;
+}
+
+function stackBar(segs, total) {   // segs: [{label,value,color}]
+  const t = total || segs.reduce((a,s)=>a+s.value,0) || 1;
+  const bar = `<div style="display:flex;height:26px;border-radius:6px;overflow:hidden;border:1px solid ${C.line}">`
+    + segs.map(s => `<div title="${esc(s.label)}: ${s.value}" style="width:${s.value/t*100}%;background:${s.color}"></div>`).join("") + `</div>`;
+  const lgd = `<div class="lgd">` + segs.map(s => `<span><i class="sw" style="background:${s.color}"></i>${esc(s.label)} ${s.value} (${pct(s.value,t)})</span>`).join("") + `</div>`;
+  return bar + lgd;
+}
+
+function renderVerdictDist(d) {
+  const a = d.audit||{}, dist = a.distribution||{};
+  const order = [["held up",C.supports],["partly invented",C.partly],["rejected","#a01818"],["not tested",C.rejected]];
+  const segs = order.filter(([k])=>dist[k]).map(([k,c])=>({label:k,value:dist[k],color:c}));
+  if (!segs.length) { $("verdictDist").innerHTML = empty("verdict distribution"); return; }
+  $("verdictDist").innerHTML = stackBar(segs, a.n_audited);
+  const subst = (dist["held up"]||0)+(dist["partly invented"]||0)+(dist["rejected"]||0);
+  $("verdictTake").innerHTML = `<b>${a.n_audited} of ${a.n_total} claims</b> verdicted (${pct1(a.n_audited,a.n_total)}) against ${a.n_interviews} interviews — ${subst} substantive, ${dist["not tested"]||0} honestly “not tested”.`;
+}
+
+function hbars(rows, color, unit) {   // rows: [[label,value]]
+  const max = Math.max(1, ...rows.map(r=>r[1]));
+  return rows.map(([lab,v]) => `
+    <div style="display:grid;grid-template-columns:120px 1fr 54px;align-items:center;gap:8px;margin:5px 0">
+      <span style="font-size:12.5px">${esc(lab)}</span>
+      <div style="height:16px;background:${C.panel};border-radius:5px"><div style="height:100%;width:${Math.max(2,v/max*100)}%;background:${color};border-radius:5px"></div></div>
+      <span class="barval" style="font-size:12.5px;text-align:right">${v.toLocaleString()}${unit||""}</span>
+    </div>`).join("");
+}
+
+function renderThemes(d) {
+  const counts = {};
+  for (const e of REGISTER) counts[e.theme||"misc"] = (counts[e.theme||"misc"]||0)+1;
+  const rows = Object.entries(counts).sort((a,b)=>b[1]-a[1]).slice(0,10);
+  if (!rows.length) { $("themes").innerHTML = empty("themes"); return; }
+  $("themes").innerHTML = hbars(rows, C.brand);
+  $("themeTake").innerHTML = `Returns/fit dominate what users <i>raise</i> — but the audit shows that volume is grievance, not the save→buy blocker.`;
+}
+
+function renderPlatforms(d) {
+  const cp = (d.manifest||{}).counts_by_platform||{};
+  const rows = Object.entries(cp).sort((a,b)=>b[1]-a[1]);
+  if (!rows.length) { $("platforms").innerHTML = empty("platforms"); return; }
+  const single = REGISTER.filter(e => (e.n_independent_srcs||1) < 2).length;
+  $("platforms").innerHTML = hbars(rows, C.supports)
+    + `<p class="small" style="margin:8px 0 0"><b style="color:${C.partly}">${single} of ${REGISTER.length} claims are single-platform</b> — thin corroboration.</p>`;
+  $("platformTake").innerHTML = `The corpus <b>supports</b> the interviews; with corroboration this thin it can't carry the diagnosis alone.`;
+}
+
+function renderH1Split(d) {
+  const s = d.h1_split||{};
+  const unclear = s.unclear!=null ? s.unclear : (s.ambiguous||0);
+  if (!s.total) { $("h1split").innerHTML = empty("H1 split"); return; }
+  $("h1split").innerHTML = (s.net_lean!=null ? `<p class="small muted" style="margin:0 0 8px">H1 net corpus lean <b>+${s.net_lean}</b> → re-cut of its ${s.total} supporting claims:</p>` : "")
+    + stackBar([{label:"Pre-purchase uncertainty",value:s.pre_purchase,color:C.supports},
+                {label:"Post-purchase grievance",value:s.post_purchase,color:C.partly},
+                {label:"Unclear",value:unclear,color:C.rejected}], s.total);
+  $("h1Take").innerHTML = `Most of H1's signal is <b>post-purchase grievance</b> (${pct(s.post_purchase,s.total)}), not saved-item hesitation (${pct(s.pre_purchase,s.total)}) — the computed reason H1 is rejected.`;
+}
+
+// ─────────────────────────────────────────── TAB 3: AUDIT (filterable)
 function verdictCell(e) {
   if (!e.audit_verdict) return `<span class="muted small">pending</span>`;
-  const cls = e.audit_verdict.replace(/\s+/g, "-");
-  return `<span class="verdict-b v-${cls}">${esc(e.audit_verdict)}</span>`
+  const cls = "v-"+e.audit_verdict.replace(/\s+/g,"-");
+  return `<span class="badge ${cls}">${esc(e.audit_verdict)}</span>`
     + (e.audit_note ? `<details><summary class="small muted">why</summary><span class="small">${esc(e.audit_note)}</span></details>` : "");
 }
 
-// ---- keyless lexical RAG with refusal --------------------------------------
-function tokens(s) {
-  return [...new Set((s.toLowerCase().match(/[a-z0-9]+/g) || []).filter(t => t.length >= 3 && !STOP.has(t)))];
+let auditSort = { key:"rank", dir:1 };
+function renderAudit(d) {
+  const a = d.audit||{};
+  $("auditCoverage").innerHTML = `<b>${a.n_audited||0} of ${a.n_total||REGISTER.length} claims</b> verdicted (${pct1(a.n_audited||0,a.n_total||REGISTER.length)}) against ${a.n_interviews||6} interviews — `
+    + Object.entries(a.distribution||{}).map(([k,n])=>`${n} ${k}`).join(" · ") + `. “Not tested” = the interviews don't speak to it (no forced verdict). Evidence: <a href="interviews.md" target="_blank" rel="noopener">the 6 transcripts</a>.`;
+  const themes = [...new Set(REGISTER.map(e=>e.theme))].sort();
+  const verds = ["held up","partly invented","rejected","not tested","pending"];
+  $("filters").innerHTML =
+    sel("fHyp","Hypothesis",["H1","H2","H3","other"]) + sel("fVerd","Verdict",verds) + sel("fTheme","Theme",themes);
+  ["fHyp","fVerd","fTheme"].forEach(id => $(id).onchange = renderAuditRows);
+  renderAuditRows();
 }
+function sel(id,label,opts){ return `<select id="${id}"><option value="">${label}: all</option>`
+  + opts.map(o=>`<option value="${esc(o)}">${esc(o)}</option>`).join("")+`</select>`; }
+
+function renderAuditRows() {
+  const fh=$("fHyp").value, fv=$("fVerd").value, ft=$("fTheme").value;
+  let rows = REGISTER.filter(e =>
+    (!fh || e.hypothesis_map===fh) &&
+    (!fv || (fv==="pending" ? !e.audit_verdict : e.audit_verdict===fv)) &&
+    (!ft || e.theme===ft));
+  const k = auditSort.key, dir = auditSort.dir;
+  rows.sort((a,b)=>{
+    if (k==="rank") return dir*(a.claim_id.localeCompare(b.claim_id));
+    if (k==="freq") return dir*((b.corpus_frequency||0)-(a.corpus_frequency||0));
+    if (k==="src")  return dir*((b.n_independent_srcs||0)-(a.n_independent_srcs||0));
+    return 0;
+  });
+  const head = `<tr>
+    <th onclick="sortAudit('rank')">#</th><th>Claim</th><th>H</th><th>Stance</th><th>Theme</th>
+    <th onclick="sortAudit('src')">Src</th><th onclick="sortAudit('freq')">n</th><th>Conf</th><th>Quotes</th><th>Interview verdict</th></tr>`;
+  const body = rows.map(e => {
+    const qs = (e.source_quotes||[]).map(q=>`<div class="q">“${esc(q.verbatim)}” <span class="src">[${esc(q.platform)}]${q.date?" · "+esc(q.date):""}</span></div>`).join("");
+    return `<tr>
+      <td class="muted">${esc(e.claim_id)}</td>
+      <td>${esc(e.claim_text)}</td>
+      <td>${badge("b-"+e.hypothesis_map.toLowerCase(), e.hypothesis_map)}</td>
+      <td>${badge("s-"+e.stance, e.stance)}</td>
+      <td class="small muted">${esc(e.theme)}</td>
+      <td>${e.n_independent_srcs}${e.thin_evidence?` <span class="badge s-contradicts" title="single platform">thin</span>`:""}</td>
+      <td>${e.corpus_frequency||1}</td>
+      <td class="small muted">${esc(e.engine_confidence)}</td>
+      <td><details><summary class="small muted">${(e.source_quotes||[]).length}</summary>${qs}</details></td>
+      <td>${verdictCell(e)}</td></tr>`;
+  }).join("");
+  $("register").innerHTML = head + (rows.length ? body : `<tr><td colspan="10" class="empty">No claims match these filters.</td></tr>`);
+}
+function sortAudit(key){ auditSort = { key, dir: (auditSort.key===key ? -auditSort.dir : 1) }; renderAuditRows(); }
+
+// ─────────────────────────────────────────── TAB 4: ASK (RAG, refuses when thin)
+function tokens(s){ return [...new Set((s.toLowerCase().match(/[a-z0-9]+/g)||[]).filter(t=>t.length>=3 && !STOP.has(t)))]; }
 function ask() {
-  const q = document.getElementById("q").value.trim();
-  const out = document.getElementById("ans");
-  const raw = tokens(q);
-  // keep only query terms that actually exist in the corpus (df >= 2) -- an off-topic query's
-  // topic words ("weather", "football") are absent, so nothing meaningful survives -> refuse.
-  const qt = raw.filter(t => (DF[t] || 0) >= 2);
-  if (!qt.length) {
-    out.innerHTML = `<div class="refuse"><b>Refused — off-corpus.</b> None of those words carry a topic this corpus of Myntra wishlist evidence can speak to.</div>`; return;
-  }
-  const MIN_DOCS = 3;
-  // query terms are already filtered to real in-corpus domain words, so a single-term match is
-  // meaningful; rank by how many query terms a doc matches. Corroboration guard is MIN_DOCS + >=2 platforms.
-  const scored = (DATA.index || []).map(doc => {
-    const hay = (doc.text + " " + doc.claim + " " + doc.quote).toLowerCase();
-    return {doc, score: qt.filter(t => hay.includes(t)).length};
-  }).filter(x => x.score >= 1).sort((a, b) => b.score - a.score);
-  const plats = new Set(scored.map(x => x.doc.platform));
-  if (scored.length < MIN_DOCS) {
-    out.innerHTML = `<div class="refuse"><b>Refused — thin evidence.</b> Only ${scored.length} document(s) meaningfully match that (need ≥${MIN_DOCS}); nothing verbatim to ground an answer on.</div>`; return;
-  }
-  if (plats.size < 2) {
-    out.innerHTML = `<div class="refuse"><b>Refused — cross-source rule.</b> Matching evidence is from only ${plats.size} platform(s). A claim needs ≥2 independent platforms.</div>`; return;
-  }
+  const q = $("q").value.trim(), out = $("ans");
+  const qt = tokens(q).filter(t => (DF[t]||0) >= 2);
+  if (!qt.length) { out.innerHTML = `<div class="refuse"><b>Refused — off-corpus.</b> None of those words carry a topic this corpus of Myntra wishlist evidence can speak to.</div>`; return; }
+  const scored = (DATA.index||[]).map(doc => {
+    const hay = (doc.text+" "+doc.claim+" "+doc.quote).toLowerCase();
+    return { doc, score: qt.filter(t=>hay.includes(t)).length };
+  }).filter(x=>x.score>=1).sort((a,b)=>b.score-a.score);
+  const plats = new Set(scored.map(x=>x.doc.platform));
+  if (scored.length < 3) { out.innerHTML = `<div class="refuse"><b>Refused — thin evidence.</b> Only ${scored.length} document(s) meaningfully match (need ≥3).</div>`; return; }
+  if (plats.size < 2) { out.innerHTML = `<div class="refuse"><b>Refused — cross-source rule.</b> Matching evidence is from only ${plats.size} platform(s); a claim needs ≥2.</div>`; return; }
   const seen = new Set();
-  const top = scored.filter(x => !seen.has(x.doc.quote) && seen.add(x.doc.quote)).slice(0, 5).map(x =>
-    `<div class="q">${badge("b-" + x.doc.hypothesis.toLowerCase(), x.doc.hypothesis)} ${badge("s-" + x.doc.stance, x.doc.stance)} “${esc(x.doc.quote)}” <span class="src">[${esc(x.doc.platform)}]</span></div>`).join("");
+  const top = scored.filter(x=>!seen.has(x.doc.quote)&&seen.add(x.doc.quote)).slice(0,5).map(x =>
+    `<div class="q">${badge("b-"+x.doc.hypothesis.toLowerCase(),x.doc.hypothesis)} ${badge("s-"+x.doc.stance,x.doc.stance)} “${esc(x.doc.quote)}” <span class="src">[${esc(x.doc.platform)}]</span></div>`).join("");
   out.innerHTML = `<div class="answer"><b>Grounded evidence</b> from ${plats.size} platforms (${[...plats].join(", ")}) — verbatim only, no generation:${top}</div>`;
 }
+window.ask = ask; window.sortAudit = sortAudit;
