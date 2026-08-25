@@ -116,4 +116,13 @@ large ambiguous bucket is itself a finding.
   freeze authorised by Mayank. Segment left open until early engine output.
 
 ## Amendment log (append-only)
-- (none yet — first post-freeze change gets a dated entry here)
+- **2026-08-25 — Third instrument added; H1 verdict updated by triangulation.** An **n=26 survey**
+  (menu-select) found H1 (fit/quality/size uncertainty) the **#1 cited reason (32%)**. With the corpus
+  already H1-loudest (+118), **two of three instruments** now favour H1, so its dashboard verdict moves
+  from "Rejected as primary blocker" → **"Supported — top blocker (2 of 3 instruments)."** The
+  dissenting instrument is kept visible: the pre-registered episodic interviews still found H1 named by
+  **0/6** as the *deciding* reason, and the corpus re-cut still shows most H1 volume is post-purchase
+  grievance — so H1 is a top **cited** blocker whose **deciding** role remains contested. Net conclusion
+  updated from a single-winner to **"no single blocker → route by intent"** (H1/H2/H3 co-equal). This is
+  triangulation across biased instruments, not a re-coding of the interviews (no interview support was
+  fabricated; the audit verdicts are unchanged). Logged by Mayank's direction.

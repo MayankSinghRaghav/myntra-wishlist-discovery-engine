@@ -57,13 +57,12 @@ const badge = (cls,txt) => `<span class="badge ${cls}">${esc(txt)}</span>`;
 
 // ─────────────────────────────────────────── TAB 1: DECISION
 function renderVerdict(d) {
-  const iv = d.interview || {};
-  const v = h => (iv[h]||{}).verdict || "";
+  const t = d.triangulation || {};
+  const banner = t.banner || "No single blocker — capture intent, then route each save to the right response.";
+  const m = banner.match(/^(.*?[.!])\s*(.*)$/s) || [null, banner, ""];
   $("verdict").innerHTML = `<div class="verdict">
-    <div class="lead">Root cause</div>
-    <div class="call">The wishlist is <b class="ok">intent-blind</b> — one save button serves buy-later, comparison,
-      occasion and inspiration alike. <b>H3 (mixed intent) confirmed</b> · <b class="h1">H1 (fit-uncertainty) rejected</b> ·
-      H2 (occasion) supported → the lever is <b class="ok">save-time intent capture</b>.</div>
+    <div class="lead">Root cause · triangulated across 3 instruments</div>
+    <div class="call"><b class="ok">${esc(m[1])}</b> ${esc(m[2])}</div>
   </div>`;
 }
 
@@ -80,31 +79,40 @@ function renderKPIs(d) {
 }
 
 function renderScoreboard(d) {
-  const lean = d.lean||{}, iv = d.interview||{};
+  const lean = d.lean||{}, tri = (d.triangulation||{}).rows||{}, survey = d.survey||{};
   const hyps = ["h1","h2","h3"].filter(h => lean[h]);
   if (!hyps.length) { $("scoreboard").innerHTML = empty("scoreboard"); return; }
   const max = Math.max(1, ...hyps.flatMap(h => [lean[h].supports, lean[h].contradicts]));
-  $("scoreboard").innerHTML = hyps.map(h => {
-    const x = lean[h], V = iv[h]||{};
-    const ivchip = V.verdict ? `<span class="iv ${IV_CLASS[V.strength]||"iv-weak"}">${esc(V.verdict)}${h==="h1"?" (0/6)":""}</span>` : "";
-    return `<div style="margin:14px 0 4px">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">
-        <b>${HYPNAME[h]}</b>${ivchip}</div>
+  const body = hyps.map(h => {
+    const x = lean[h], T = tri[h]||{};
+    const vchip = `<span class="iv ${IV_CLASS[T.strength]||"iv-weak"}">${esc(T.verdict||"")}${T.instruments?` · ${esc(T.instruments)}`:""}</span>`;
+    return `<div style="margin:16px 0 4px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;gap:8px">
+        <b>${esc(T.name||HYPNAME[h])}</b>${vchip}</div>
       <div style="display:flex;align-items:center;gap:7px">
         <span class="barval" style="width:26px;text-align:right;color:${C.partly}" title="contradicts">${x.contradicts}</span>
-        <div style="flex:1;position:relative;height:20px;background:${C.panel};border-radius:5px">
+        <div style="flex:1;position:relative;height:18px;background:${C.panel};border-radius:5px">
           <div style="position:absolute;right:50%;top:0;bottom:0;width:${x.contradicts/max*50}%;background:${C.partly};border-radius:5px 0 0 5px"></div>
           <div style="position:absolute;left:50%;top:0;bottom:0;width:${x.supports/max*50}%;background:${C.supports};border-radius:0 5px 5px 0"></div>
           <div style="position:absolute;left:50%;top:-3px;bottom:-3px;width:1.5px;background:#3a3f4c"></div>
         </div>
         <span class="barval" style="width:30px;color:${C.supports}" title="supports">${x.supports}</span>
-        <span style="width:46px;text-align:right;font-weight:800">${x.net>=0?"+":""}${x.net}</span>
+      </div>
+      <div class="tri-row">
+        <span><i class="tri-k">Engine</i> ${esc(T.engine||("+"+x.net))}</span>
+        <span><i class="tri-k">Survey n=${survey.n||26}</i> ${esc(T.survey||"—")}</span>
+        <span><i class="tri-k">Interviews</i> ${esc(T.interviews||"—")}</span>
       </div></div>`;
-  }).join("") + `<div class="lgd"><span><i class="sw" style="background:${C.supports}"></i>supports (→)</span>
-      <span><i class="sw" style="background:${C.partly}"></i>contradicts (←)</span>
-      <span>│ centre = zero · badge = interview verdict</span></div>`;
-  $("scoreTake").innerHTML = `The corpus leans hardest on <b>H1 (+${lean.h1.net})</b> — yet the interviews
-    <b>rejected it</b>. Corpus proposes, primary research decides.`;
+  }).join("");
+  const price = (d.triangulation||{}).price||{};
+  const priceRow = `<div class="price-row">🏷️ <b>Price</b> — <b>${esc(price.verdict||"barred lever — not actioned")}</b>
+      <span class="muted small">· Engine: ${esc(price.engine||"present")} · ${esc(price.survey||"top-2 driver")}</span></div>`;
+  const legend = `<div class="lgd"><span><i class="sw" style="background:${C.supports}"></i>corpus supports (→)</span>
+      <span><i class="sw" style="background:${C.partly}"></i>contradicts (←)</span><span>│ badge = triangulated verdict</span></div>`;
+  const bias = `<p class="small muted bias">⚖ ${esc((d.triangulation||{}).bias_note||"")}</p>`;
+  $("scoreboard").innerHTML = body + priceRow + legend + bias;
+  $("scoreTake").innerHTML = `<b>Two of three instruments make H1 a top blocker</b> (corpus loudest, survey #1);
+    the episodic interviews dissent on its <b>deciding</b> role (0/6). No single blocker → <b>route by intent</b>.`;
 }
 
 function renderReconcile(d) {
@@ -113,14 +121,15 @@ function renderReconcile(d) {
   const cq = contra ? `“${esc(contra.source_quotes[0].verbatim)}” <span class="src">[${esc(contra.source_quotes[0].platform)}]</span>` : "";
   const unclear = sp.unclear!=null ? sp.unclear : (sp.ambiguous||0);
   $("reconcile").innerHTML = `<div class="reconcile">
-    <div class="rec-tag">Corpus proposes → interviews decide</div>
-    <p style="margin:0">The corpus's loudest signal is <b>H1, net +${(lean.h1||{}).net}</b> — but the interviews
-      <b style="color:#a01818">rejected H1 as the primary blocker</b> (${esc(iv.detail||"0/6 named fit/quality/return as the deciding reason")}). That is the method working, not a bug:</p>
+    <div class="rec-tag">Why H1 is a top blocker — and why it's contested</div>
+    <p style="margin:0">H1 is the <b>loudest corpus signal (+${(lean.h1||{}).net})</b> and the <b>#1 survey reason (${esc((d.survey||{}).h1||"32%")})</b>,
+      yet the episodic interviews found it rarely the <b>deciding</b> reason (0/6). Both are true — shown, not smoothed:</p>
     <ul>
-      <li>H1's lean is <b>inflated by post-purchase return grievances</b> — of ${sp.total||0} supporting claims only
-        <b>${sp.pre_purchase||0}</b> are pre-purchase uncertainty vs <b>${sp.post_purchase||0}</b> post-purchase grievance (${unclear} unclear).</li>
-      <li>It <b>cuts both ways</b> — the corpus also carries claims against H1${cq?`, e.g. ${cq}`:""}.</li>
-      <li>Public text can only <b>propose</b>; only primary research on saved items settles it — and it did: H3 strong, H2 supported, <b>H1 rejected</b>.</li>
+      <li>Most of H1's corpus volume is <b>post-purchase grievance</b>, not saved-item hesitation — ${sp.pre_purchase||0} pre-purchase vs
+        <b>${sp.post_purchase||0}</b> post-purchase (${unclear} unclear). So it's a top <b>cited</b> blocker, easily over-weighted as the <b>deciding</b> one.</li>
+      <li>It cuts both ways — the corpus also carries claims against H1${cq?`, e.g. ${cq}`:""}.</li>
+      <li><b>Two of three instruments</b> support H1 → <b>Supported as a top blocker</b>. The interview dissent on deciding-role is exactly why
+        the answer isn't “one blocker” but <b>route by intent</b> — H1, H2 and H3 are co-equal.</li>
     </ul></div>`;
 }
 
@@ -195,7 +204,7 @@ function renderH1Split(d) {
     + stackBar([{label:"Pre-purchase uncertainty",value:s.pre_purchase,color:C.supports},
                 {label:"Post-purchase grievance",value:s.post_purchase,color:C.partly},
                 {label:"Unclear",value:unclear,color:C.rejected}], s.total);
-  $("h1Take").innerHTML = `Most of H1's signal is <b>post-purchase grievance</b> (${pct(s.post_purchase,s.total)}), not saved-item hesitation (${pct(s.pre_purchase,s.total)}) — the computed reason H1 is rejected.`;
+  $("h1Take").innerHTML = `Most of H1's corpus signal is <b>post-purchase grievance</b> (${pct(s.post_purchase,s.total)}), not saved-item hesitation (${pct(s.pre_purchase,s.total)}) — the computed reason its <b>deciding</b> role is contested even while it's a top <b>cited</b> blocker.`;
 }
 
 // ─────────────────────────────────────────── TAB 3: AUDIT (filterable)

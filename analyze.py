@@ -205,6 +205,32 @@ INTERVIEW = {
     ],
 }
 
+# THIRD instrument: an n=26 survey (menu-select). Entered here as provided primary-research input.
+SURVEY = {"n": 26,
+          "h1": "32% · #1 reason", "h2": "28% · incl. substitution", "h3": "12% pure / 65% fuzzy intent"}
+
+# TRIANGULATION — reconcile three biased instruments (corpus complaint-skewed, survey menu-inflated,
+# interviews small-n / network-skewed). Verdict = the triangulated majority, with each instrument shown
+# (incl. the dissenter) so nothing is smoothed. Logged amendment: hypotheses.md 2026-08-25.
+BIAS_NOTE = ("Every instrument is biased — interviews small-n & network-skewed, survey menu-inflated, "
+             "corpus complaint-skewed. Verdicts reflect the triangulated majority, not any single source.")
+TRIANGULATION = {
+    "banner": ("No single blocker. Uncertainty (H1), occasion-decay (H2) and mixed intent (H3) are "
+               "co-equal — the root error is treating all saves identically. Fix: capture intent, then "
+               "route each save to the right response."),
+    "rows": {
+        "h1": {"name": "H1 — uncertainty", "engine": "+118 · loudest", "survey": "32% · #1 reason",
+               "interviews": "0/6 deciding", "verdict": "Supported — top blocker", "instruments": "2 of 3", "strength": "strong"},
+        "h2": {"name": "H2 — occasion decay", "engine": "+11", "survey": "28% · incl. substitution",
+               "interviews": "supported", "verdict": "Supported", "instruments": "3 of 3", "strength": "strong"},
+        "h3": {"name": "H3 — mixed intent", "engine": "+19", "survey": "12% pure / 65% fuzzy",
+               "interviews": "supported", "verdict": "Real — smaller as a deciding reason", "instruments": "mixed", "strength": "weak"},
+    },
+    "price": {"engine": "present in corpus", "survey": "top-2 driver (interviews)",
+              "verdict": "barred lever — not actioned"},
+    "bias_note": BIAS_NOTE,
+}
+
 # pre-purchase uncertainty vs post-purchase grievance — the H1 re-cut lives in reclassify_h1.py
 # (a standalone, reproducible pass). analyze.py delegates to it so there is ONE classifier.
 import reclassify_h1  # noqa: E402
@@ -414,7 +440,8 @@ def main() -> None:
     json.dump(manifest, open("corpus_manifest.json", "w", encoding="utf-8"), ensure_ascii=False, indent=1)
     write_early_signal(lean, cats, manifest, register)
     json.dump({"manifest": manifest, "register": register, "lean": lean, "categories": cats,
-               "discard_pile": discard, "interview": INTERVIEW, "h1_split": h1_split, "audit": audit,
+               "discard_pile": discard, "interview": INTERVIEW, "survey": SURVEY,
+               "triangulation": TRIANGULATION, "h1_split": h1_split, "audit": audit,
                "index": build_index(shippable)},
               open(args.data, "w", encoding="utf-8"), ensure_ascii=False)
     print(f"Wrote claims_register.json ({len(register)} claims), corpus_manifest.json, "
