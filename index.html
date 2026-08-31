@@ -79,6 +79,34 @@
   .muted{color:var(--muted)} .small{font-size:12.5px} details{margin-top:4px}
   .empty{color:var(--muted);font-size:13px;padding:18px;text-align:center;border:1px dashed var(--line);border-radius:10px}
   code{background:var(--panel);padding:1px 5px;border-radius:4px}
+  /* method pipeline — wraps so all 7 stages stay visible (order carried by STAGE n) */
+  .pipe{display:flex;flex-wrap:wrap;gap:10px;padding:6px 2px 12px}
+  .stage{flex:1 1 200px;border:1px solid var(--line);border-radius:12px;padding:12px 13px;background:#fff;position:relative;display:flex;flex-direction:column}
+  .stage .no{font-size:11px;font-weight:800;color:var(--brand);letter-spacing:.08em}
+  .stage h4{margin:2px 0 5px;font-size:13.5px}
+  .stage p{margin:0;font-size:12px;color:var(--muted);line-height:1.45}
+  .stage .n{align-self:flex-start;margin-top:auto;padding-top:8px}
+  .stage .n b{display:inline-block;font-size:12px;font-weight:800;color:var(--ink);background:var(--panel);border-radius:6px;padding:3px 8px}
+  .notsent{background:#eef6ff;border:1px solid #cfe3f7;border-left:4px solid var(--supports);border-radius:10px;padding:11px 14px;font-size:13.5px;margin:4px 0 14px}
+  .chips{display:flex;flex-wrap:wrap;gap:10px;margin-top:12px}
+  .chip{flex:1 1 210px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+  .chip b{display:block;font-size:22px;line-height:1.15;color:var(--ink)} .chip span{font-size:12px;color:var(--muted)}
+  /* opportunity table */
+  table.opps{border-collapse:collapse;width:100%;font-size:13px}
+  table.opps th,table.opps td{border-bottom:1px solid var(--line);padding:8px 9px;text-align:left;vertical-align:middle}
+  table.opps th{background:var(--panel);font-size:11.5px;color:var(--muted);white-space:nowrap;text-transform:uppercase;letter-spacing:.02em}
+  table.opps th.help{cursor:help;text-decoration:underline dotted}
+  tr.opp-row{cursor:pointer} tr.opp-row:hover{background:#fff6f8}
+  tr.opp-row.noise{opacity:.5} tr.opp-row.noise:hover{opacity:.75}
+  .score-pill{display:inline-block;font-weight:800;color:#fff;background:var(--brand);border-radius:6px;padding:2px 9px;font-size:13px;min-width:34px;text-align:center}
+  .score-pill.lo{background:var(--rejected)}
+  .sig{font-size:10.5px;font-weight:800;border-radius:5px;padding:2px 7px;color:#fff}
+  .sig.real{background:var(--supports)} .sig.noise{background:var(--rejected)}
+  .mbar{height:8px;background:var(--panel);border-radius:4px;width:64px;display:inline-block;vertical-align:middle;overflow:hidden}
+  .mbar>div{height:100%;background:var(--brand)}
+  .drill td{background:var(--panel)} .drill .claim{border-left:3px solid #cfd2d8;padding:4px 10px;margin:7px 0;font-size:12.5px}
+  .drill .tags{margin-top:3px} .drill .tags .badge{margin-right:4px}
+  .discard{padding:9px 12px;background:#fbf4f4;border:1px dashed #e5b8b8;border-radius:8px;font-size:12.5px;color:#7a2b2b;margin:6px 0 0}
 </style>
 </head>
 <body>
@@ -88,6 +116,7 @@
     <nav class="tabs">
       <button class="tab on" data-tab="decision">Decision</button>
       <button class="tab" data-tab="evidence">Evidence</button>
+      <button class="tab" data-tab="method">Method</button>
       <button class="tab" data-tab="audit">Audit</button>
       <button class="tab" data-tab="ask">Ask the evidence</button>
     </nav>
@@ -107,12 +136,26 @@
   </section>
 
   <section id="tab-evidence" class="tabpane">
+    <div class="card">
+      <h3>Opportunity ranking <span class="cap">— every theme quantified, scored & traceable · click a row for its source-cited claims</span></h3>
+      <div class="tablewrap"><table class="opps" id="opps"></table></div>
+      <p class="discard" id="oppDiscard"></p>
+      <p class="take" id="oppTake"></p>
+    </div>
     <div class="grid2">
       <div class="card"><h3>Corpus funnel</h3><div id="funnel"></div><p class="take" id="funnelTake"></p></div>
       <div class="card"><h3>Audit verdict distribution</h3><div id="verdictDist"></div><p class="take" id="verdictTake"></p></div>
-      <div class="card"><h3>Theme distribution <span class="cap">— what users raise, by volume</span></h3><div id="themes"></div><p class="take" id="themeTake"></p></div>
       <div class="card"><h3>Platform corroboration</h3><div id="platforms"></div><p class="take" id="platformTake"></p></div>
       <div class="card wide"><h3>H1: pre-purchase uncertainty vs post-purchase grievance</h3><div id="h1split"></div><p class="take" id="h1Take"></p></div>
+    </div>
+  </section>
+
+  <section id="tab-method" class="tabpane">
+    <div class="card">
+      <h3>How the engine works <span class="cap">— structured classification + scoring + clustering, computed from the corpus</span></h3>
+      <div class="notsent" id="notSent"></div>
+      <div class="pipe" id="pipe"></div>
+      <div class="chips" id="honesty"></div>
     </div>
   </section>
 
@@ -195,8 +238,8 @@ function buildDF(d) {
 function renderAll(d) {
   try { renderVerdict(d); } catch(e){ $("verdict").innerHTML=empty("verdict"); }
   renderKPIs(d); renderScoreboard(d); renderReconcile(d);
-  renderFunnel(d); renderVerdictDist(d); renderThemes(d); renderPlatforms(d); renderH1Split(d);
-  renderAudit(d);
+  renderOpps(d); renderFunnel(d); renderVerdictDist(d); renderPlatforms(d); renderH1Split(d);
+  renderMethod(d); renderAudit(d);
 }
 const empty = what => `<div class="empty">No data for ${esc(what)}.</div>`;
 const badge = (cls,txt) => `<span class="badge ${cls}">${esc(txt)}</span>`;
@@ -353,6 +396,131 @@ function renderH1Split(d) {
   $("h1Take").innerHTML = `Most of H1's corpus signal is <b>post-purchase grievance</b> (${pct(s.post_purchase,s.total)}), not saved-item hesitation (${pct(s.pre_purchase,s.total)}) — the computed reason its <b>deciding</b> role is contested even while it's a top <b>cited</b> blocker.`;
 }
 
+// ─────────────────────────────────────────── OPPORTUNITY RANKING (Evidence) + METHOD
+// deterministic pre/post-purchase classifier — mirrors reclassify_h1.py, powers the EFFORT term.
+const RE_POST = /\b(returns?|returned|refund|exchang|replac|deliver|courier|pick[- ]?up|shipment|shipping|receiv|arriv|wrong (product|item|size|order)|damag|defective|torn|faulty|old product|used product|cancel|my order|the order|order was|quality check|not as (shown|described))/i;
+const RE_PRE = /\b(not sure|unsure|confus|can'?t decide|don'?t know (if|which|what)|size chart|which size|will it fit|true to size|size guide|before (buy|order|purchas|i buy)|should i buy|thinking of buying|planning to buy|hesitat|not confident|afraid it (won'?t|wont)|worried it)/i;
+function prePost(text){ const post=RE_POST.test(text||""), pre=RE_PRE.test(text||""); return (pre&&!post)?"pre":(post&&!pre)?"post":"unclear"; }
+function claimBlob(e){ return (e.claim_text||"")+" "+(e.source_quotes||[]).map(q=>q.verbatim||"").join(" "); }
+function bandv(v,lo,hi){ return v>=hi?3:(v>=lo?2:1); }
+const HYP_FIT = { H1:3, H2:3, H3:2, other:1 };   // business-fit: hypothesis addressability (price=0, barred)
+
+let OPPS = [];
+function renderOpps(d){
+  const rel = (d.manifest||{}).n_relevant || REGISTER.length || 1;
+  const byTheme = {};
+  for (const e of REGISTER){ const t=e.theme||"misc"; (byTheme[t]=byTheme[t]||[]).push(e); }
+  const maxRec = Math.max(1, ...Object.values(byTheme).map(a=>a.length));
+  OPPS = Object.entries(byTheme).map(([theme,claims]) => {
+    const records = claims.length;
+    const supShare = records ? claims.filter(e=>e.stance==="supports").length/records : 0;
+    const hc={}; for (const e of claims){ const h=e.hypothesis_map||"other"; hc[h]=(hc[h]||0)+1; }
+    const domH = Object.entries(hc).sort((a,b)=>b[1]-a[1])[0][0];
+    const barred = /price/i.test(theme);
+    let pre=0, post=0;
+    for (const e of claims){ const b=prePost(claimBlob(e)); if(b==="pre")pre++; else if(b==="post")post++; }
+    const postShare = (pre+post) ? post/(pre+post) : 0.5;
+    const effort = postShare>=0.6 ? 3 : postShare>=0.3 ? 2 : 1;   // ops-heavy=3, pre-purchase fix=1
+    const pain = bandv(supShare, 0.34, 0.6);
+    const freq = bandv(Math.log1p(records)/Math.log1p(maxRec), 0.5, 0.8);
+    const fit  = barred ? 0 : (HYP_FIT[domH]||1);
+    const score = fit===0 ? 0 : +((pain*freq*fit)/effort).toFixed(2);
+    const noise = barred || theme==="misc";
+    return { theme, records, share:records/rel, domH, barred, pain, freq, fit, effort, score, noise, claims };
+  }).sort((a,b)=> (a.noise-b.noise) || (b.score-a.score));
+
+  const maxScore = Math.max(1, ...OPPS.map(o=>o.score));
+  const head = `<tr><th>Theme</th><th>Records · % of relevant</th><th>Maps to</th>`
+    + `<th class="help" title="pain × frequency × business-fit ÷ effort — each factor a 1–3 band computed from the corpus. pain = share of claims evidencing a real blocker; frequency = log-scaled volume; business-fit = hypothesis addressability (H1/H2=3, H3=2, other=1, price=0 barred); effort = post-purchase share (ops-heavy=3, pre-purchase wishlist fix=1). Higher = act first.">Opportunity score ⓘ</th>`
+    + `<th>Signal</th></tr>`;
+  const rows = OPPS.map((o,i) => {
+    const maps = o.barred ? `<span class="badge b-other">barred · price</span>`
+                          : `<span class="badge b-${o.domH.toLowerCase()}">${esc(o.domH)}</span>`;
+    const sig = o.noise ? `<span class="sig noise">Noise</span>` : `<span class="sig real">Real</span>`;
+    const pill = `<span class="score-pill${o.score < maxScore*0.5 ? " lo":""}">${o.score}</span>`;
+    return `<tr class="opp-row${o.noise?" noise":""}" onclick="drill(${i})" title="click for the source-cited claims">
+      <td><b>${esc(o.theme.replace(/_/g," "))}</b></td>
+      <td>${o.records} <span class="muted">(${(o.share*100).toFixed(1)}%)</span>
+        <span class="mbar"><div style="width:${Math.max(4,o.records/maxRec*100)}%"></div></span></td>
+      <td>${maps}</td>
+      <td>${pill} <span class="muted small">P${o.pain}·F${o.freq}·B${o.fit}÷E${o.effort}</span></td>
+      <td>${sig}</td></tr>
+      <tr id="drill-${i}" class="drill" style="display:none"><td colspan="5"></td></tr>`;
+  }).join("");
+  $("opps").innerHTML = head + rows;
+
+  const dp = d.discard_pile||{};
+  const notRel = (dp.not_relevant&&dp.not_relevant.count) || ((d.manifest||{}).n_documents - rel) || 0;
+  const noQ = (dp.unverified_claims&&dp.unverified_claims.count) || 0;
+  $("oppDiscard").innerHTML = `🗑 Discard pile (shown for honesty): <b>${notRel.toLocaleString()}</b> not-relevant documents + `
+    + `<b>${noQ}</b> claims dropped for no traceable quote — never counted in any theme above.`;
+  const top = OPPS.find(o=>!o.noise);
+  $("oppTake").innerHTML = top ? `Top actionable theme by score: <b>${esc(top.theme.replace(/_/g," "))}</b>. `
+    + `Because score divides by effort, loud <i>post-purchase</i> themes (returns/delivery) are down-weighted vs cheaper `
+    + `<i>pre-purchase</i> wishlist fixes. Score is a hypothesis for prioritisation, not proof.` : "";
+}
+
+function drill(i){
+  const row = $("drill-"+i); if (!row) return;
+  if (row.style.display !== "none"){ row.style.display="none"; return; }
+  const o = OPPS[i]; if (!o) return;
+  const cs = o.claims.slice()
+    .sort((a,b)=>(b.n_independent_srcs||1)-(a.n_independent_srcs||1) || (b.corpus_frequency||1)-(a.corpus_frequency||1))
+    .slice(0,8);
+  const items = cs.map(e => {
+    const q = (e.source_quotes||[])[0] || {};
+    const tags = badge("b-"+(e.hypothesis_map||"other").toLowerCase(), e.hypothesis_map||"other")
+      + " " + badge("s-"+e.stance, e.stance) + ` <span class="badge b-other">${esc(e.theme)}</span>`;
+    const verb = q.verbatim ? `<details><summary class="small muted">source quote (audit trail)</summary>`
+      + `<div class="q">“${esc(q.verbatim)}” <span class="src">[${esc(q.platform)}]${q.date?" · "+esc(q.date):""}</span></div></details>` : "";
+    return `<div class="claim"><div>${esc(e.claim_text)}</div>
+      <div class="tags">${tags} <span class="src">[${esc(q.platform||"—")}]</span></div>${verb}</div>`;
+  }).join("");
+  row.querySelector("td").innerHTML =
+    `<div class="small muted" style="margin-bottom:2px">Paraphrased atomic claims (scraped text is paraphrased, not quoted) — `
+    + `${o.records} in this theme, showing top ${cs.length} by corroboration. Each re-opens to its verbatim source.</div>` + items;
+  row.style.display = "";
+}
+
+function renderMethod(d){
+  const m=d.manifest||{}, dp=d.discard_pile||{}, a=d.audit||{}, cats=d.categories||{};
+  const docs=m.n_documents||0, rel=m.n_relevant||0;
+  const dropped=(dp.not_relevant&&dp.not_relevant.count) || (docs-rel);
+  const claims=REGISTER.length, noQuote=(dp.unverified_claims&&dp.unverified_claims.count)||0;
+  const hyp={}; for(const e of REGISTER){ const h=e.hypothesis_map||"other"; hyp[h]=(hyp[h]||0)+1; }
+  const themes={}; for(const e of REGISTER){ themes[e.theme||"misc"]=(themes[e.theme||"misc"]||0)+1; }
+  const nThemes=Object.keys(themes).length;
+  const topThemes=Object.entries(themes).sort((a,b)=>b[1]-a[1]).slice(0,3).map(([k,v])=>`${k.replace(/_/g," ")} ${v}`).join(" · ");
+  const cp=m.counts_by_platform||{};
+  const nice=k=>({google_play:"Play Store",youtube:"YouTube",reddit:"Reddit"}[k]||k);
+  const plats=Object.entries(cp).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`${nice(k)} ${v.toLocaleString()}`).join(" · ");
+  const dist=a.distribution||{}, heldUp=dist["held up"]||0;
+  const substantive=(dist["held up"]||0)+(dist["partly invented"]||0)+(dist["rejected"]||0);
+  const agree = substantive ? Math.round(heldUp/substantive*100) : 0;
+  const notIng=(m.not_ingested||[]).length ? " Wired-not-ingested: "+m.not_ingested.join(", ")+"." : "";
+
+  const stages=[
+    ["Ingest",`Public reviews & discussions across platforms.${notIng}`,`${docs.toLocaleString()} docs · ${plats}`],
+    ["Filter",`English + length ≥ 20 words; scarce sources classified first. Off-topic noise removed before any LLM cost.`,`${rel} kept · ${dropped.toLocaleString()} dropped`],
+    ["Extract",`An LLM tags each record into a FIXED closed taxonomy (evidence type · decision driver · purchase context · ${Object.keys(cats).length} product segments). It cannot invent tags; anything outside the list or with no verbatim quote is rejected — a zero-hallucination guardrail.`,`${claims} traceable claims`],
+    ["Map",`Each claim is mapped to a pre-registered hypothesis: H1 uncertainty · H2 occasion-decay · H3 mixed-intent.`,`H1 ${hyp.H1||0} · H2 ${hyp.H2||0} · H3 ${hyp.H3||0} · other ${hyp.other||0}`],
+    ["Score",`Each opportunity scored pain × frequency × business-fit ÷ effort (inverse-effort, RICE-style) — not sentiment polarity.`,`ranked in Evidence →`],
+    ["Cluster",`Recurring tag-pairs are tallied mathematically (no LLM) to surface the top cross-patterns.`,`${nThemes} themes · ${topThemes}`],
+    ["Emit",`A ranked, filterable opportunity list; every row re-openable to its source quote; refuses to answer on thin evidence (<3 docs or <2 platforms).`,`${claims} claims live`],
+  ];
+  $("pipe").innerHTML = stages.map((s,i)=>`<div class="stage">
+    <div class="no">STAGE ${i+1}</div><h4>${esc(s[0])}</h4><p>${s[1]}</p><span class="n"><b>${esc(s[2])}</b></span></div>`).join("");
+  $("notSent").innerHTML = `<b>This is structured classification + scoring + clustering — NOT sentiment analysis.</b> `
+    + `No polarity ("positive/negative") score is used anywhere; every row is a typed claim mapped to a hypothesis and re-openable to its verbatim source.`;
+  const noSignal = docs ? (1-rel/docs)*100 : 0;
+  const chips=[
+    [`${noSignal.toFixed(1)}%`, `no-signal — off-topic noise correctly discarded (${dropped.toLocaleString()}/${docs.toLocaleString()})`],
+    [`${heldUp}/${substantive}`, `AI↔human agreement — claims that held up vs the ${a.n_interviews||6} interviews on the hand-audited sample (${agree}%)`],
+    [`${noQuote}`, `claims dropped for no traceable verbatim quote (anti-hallucination)`],
+  ];
+  $("honesty").innerHTML = chips.map(([b,s])=>`<div class="chip"><b>${b}</b><span>${esc(s)}</span></div>`).join("");
+}
+
 // ─────────────────────────────────────────── TAB 3: AUDIT (filterable)
 function verdictCell(e) {
   if (!e.audit_verdict) return `<span class="muted small">pending</span>`;
@@ -428,7 +596,7 @@ function ask() {
     `<div class="q">${badge("b-"+x.doc.hypothesis.toLowerCase(),x.doc.hypothesis)} ${badge("s-"+x.doc.stance,x.doc.stance)} “${esc(x.doc.quote)}” <span class="src">[${esc(x.doc.platform)}]</span></div>`).join("");
   out.innerHTML = `<div class="answer"><b>Grounded evidence</b> from ${plats.size} platforms (${[...plats].join(", ")}) — verbatim only, no generation:${top}</div>`;
 }
-window.ask = ask; window.sortAudit = sortAudit;
+window.ask = ask; window.sortAudit = sortAudit; window.drill = drill;
 
 </script>
 </body>

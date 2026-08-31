@@ -79,6 +79,34 @@
   .muted{color:var(--muted)} .small{font-size:12.5px} details{margin-top:4px}
   .empty{color:var(--muted);font-size:13px;padding:18px;text-align:center;border:1px dashed var(--line);border-radius:10px}
   code{background:var(--panel);padding:1px 5px;border-radius:4px}
+  /* method pipeline — wraps so all 7 stages stay visible (order carried by STAGE n) */
+  .pipe{display:flex;flex-wrap:wrap;gap:10px;padding:6px 2px 12px}
+  .stage{flex:1 1 200px;border:1px solid var(--line);border-radius:12px;padding:12px 13px;background:#fff;position:relative;display:flex;flex-direction:column}
+  .stage .no{font-size:11px;font-weight:800;color:var(--brand);letter-spacing:.08em}
+  .stage h4{margin:2px 0 5px;font-size:13.5px}
+  .stage p{margin:0;font-size:12px;color:var(--muted);line-height:1.45}
+  .stage .n{align-self:flex-start;margin-top:auto;padding-top:8px}
+  .stage .n b{display:inline-block;font-size:12px;font-weight:800;color:var(--ink);background:var(--panel);border-radius:6px;padding:3px 8px}
+  .notsent{background:#eef6ff;border:1px solid #cfe3f7;border-left:4px solid var(--supports);border-radius:10px;padding:11px 14px;font-size:13.5px;margin:4px 0 14px}
+  .chips{display:flex;flex-wrap:wrap;gap:10px;margin-top:12px}
+  .chip{flex:1 1 210px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+  .chip b{display:block;font-size:22px;line-height:1.15;color:var(--ink)} .chip span{font-size:12px;color:var(--muted)}
+  /* opportunity table */
+  table.opps{border-collapse:collapse;width:100%;font-size:13px}
+  table.opps th,table.opps td{border-bottom:1px solid var(--line);padding:8px 9px;text-align:left;vertical-align:middle}
+  table.opps th{background:var(--panel);font-size:11.5px;color:var(--muted);white-space:nowrap;text-transform:uppercase;letter-spacing:.02em}
+  table.opps th.help{cursor:help;text-decoration:underline dotted}
+  tr.opp-row{cursor:pointer} tr.opp-row:hover{background:#fff6f8}
+  tr.opp-row.noise{opacity:.5} tr.opp-row.noise:hover{opacity:.75}
+  .score-pill{display:inline-block;font-weight:800;color:#fff;background:var(--brand);border-radius:6px;padding:2px 9px;font-size:13px;min-width:34px;text-align:center}
+  .score-pill.lo{background:var(--rejected)}
+  .sig{font-size:10.5px;font-weight:800;border-radius:5px;padding:2px 7px;color:#fff}
+  .sig.real{background:var(--supports)} .sig.noise{background:var(--rejected)}
+  .mbar{height:8px;background:var(--panel);border-radius:4px;width:64px;display:inline-block;vertical-align:middle;overflow:hidden}
+  .mbar>div{height:100%;background:var(--brand)}
+  .drill td{background:var(--panel)} .drill .claim{border-left:3px solid #cfd2d8;padding:4px 10px;margin:7px 0;font-size:12.5px}
+  .drill .tags{margin-top:3px} .drill .tags .badge{margin-right:4px}
+  .discard{padding:9px 12px;background:#fbf4f4;border:1px dashed #e5b8b8;border-radius:8px;font-size:12.5px;color:#7a2b2b;margin:6px 0 0}
 </style>
 </head>
 <body>
@@ -88,6 +116,7 @@
     <nav class="tabs">
       <button class="tab on" data-tab="decision">Decision</button>
       <button class="tab" data-tab="evidence">Evidence</button>
+      <button class="tab" data-tab="method">Method</button>
       <button class="tab" data-tab="audit">Audit</button>
       <button class="tab" data-tab="ask">Ask the evidence</button>
     </nav>
@@ -107,12 +136,26 @@
   </section>
 
   <section id="tab-evidence" class="tabpane">
+    <div class="card">
+      <h3>Opportunity ranking <span class="cap">— every theme quantified, scored & traceable · click a row for its source-cited claims</span></h3>
+      <div class="tablewrap"><table class="opps" id="opps"></table></div>
+      <p class="discard" id="oppDiscard"></p>
+      <p class="take" id="oppTake"></p>
+    </div>
     <div class="grid2">
       <div class="card"><h3>Corpus funnel</h3><div id="funnel"></div><p class="take" id="funnelTake"></p></div>
       <div class="card"><h3>Audit verdict distribution</h3><div id="verdictDist"></div><p class="take" id="verdictTake"></p></div>
-      <div class="card"><h3>Theme distribution <span class="cap">— what users raise, by volume</span></h3><div id="themes"></div><p class="take" id="themeTake"></p></div>
       <div class="card"><h3>Platform corroboration</h3><div id="platforms"></div><p class="take" id="platformTake"></p></div>
       <div class="card wide"><h3>H1: pre-purchase uncertainty vs post-purchase grievance</h3><div id="h1split"></div><p class="take" id="h1Take"></p></div>
+    </div>
+  </section>
+
+  <section id="tab-method" class="tabpane">
+    <div class="card">
+      <h3>How the engine works <span class="cap">— structured classification + scoring + clustering, computed from the corpus</span></h3>
+      <div class="notsent" id="notSent"></div>
+      <div class="pipe" id="pipe"></div>
+      <div class="chips" id="honesty"></div>
     </div>
   </section>
 
