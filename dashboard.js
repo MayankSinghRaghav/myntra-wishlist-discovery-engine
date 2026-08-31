@@ -99,7 +99,7 @@ function renderKPIs(d) {
   const tiles = [
     [(m.n_documents||0).toLocaleString(), "public docs analysed"],
     [(m.n_register_entries||REGISTER.length||0), "traceable claims · 100% quote-backed"],
-    [nHyp, "competing blockers · none dominant"],
+    [nHyp, "competing blockers · loudest ≠ decisive"],
     ["3", "instruments triangulated · corpus · survey · interviews"],
   ];
   $("kpis").innerHTML = tiles.map(([b,s]) => `<div class="kpi"><b>${b}</b><span>${s}</span></div>`).join("");
