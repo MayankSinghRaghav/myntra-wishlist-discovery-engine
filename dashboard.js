@@ -23,6 +23,7 @@ const STOP = new Set(("about above after again against all and any are aren cann
   + "use using buy bought order get got just really also one two lot bit want need").split(/\s+/));
 
 const esc = s => String(s==null?"":s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const themeLabel = t => String(t||"misc").replace(/_/g," ");   // snake_case theme keys are internal, never user-facing
 const pct = (n,d) => d ? Math.round(n/d*100)+"%" : "0%";
 const pct1 = (n,d) => d ? (n/d*100).toFixed(1)+"%" : "0%";
 const $ = id => document.getElementById(id);
@@ -271,7 +272,7 @@ function renderOpps(d){
     const sig = o.noise ? `<span class="sig noise">Noise</span>` : `<span class="sig real">Real</span>`;
     const pill = `<span class="score-pill${o.score < maxScore*0.5 ? " lo":""}">${o.score}</span>`;
     return `<tr class="opp-row${o.noise?" noise":""}" onclick="drill(${i})" title="click for the source-cited claims">
-      <td><b>${esc(o.theme.replace(/_/g," "))}</b></td>
+      <td><b>${esc(themeLabel(o.theme))}</b></td>
       <td>${o.records} <span class="muted">(${(o.share*100).toFixed(1)}%)</span>
         <span class="mbar"><div style="width:${Math.max(4,o.records/maxRec*100)}%"></div></span></td>
       <td>${maps}</td>
@@ -287,7 +288,7 @@ function renderOpps(d){
   $("oppDiscard").innerHTML = `🗑 Discard pile (shown for honesty): <b>${notRel.toLocaleString()}</b> not-relevant documents + `
     + `<b>${noQ}</b> claims dropped for no traceable quote — never counted in any theme above.`;
   const top = OPPS.find(o=>!o.noise);
-  $("oppTake").innerHTML = top ? `Top actionable theme by score: <b>${esc(top.theme.replace(/_/g," "))}</b>. `
+  $("oppTake").innerHTML = top ? `Top actionable theme by score: <b>${esc(themeLabel(top.theme))}</b>. `
     + `Because score divides by effort, loud <i>post-purchase</i> themes (returns/delivery) are down-weighted vs cheaper `
     + `<i>pre-purchase</i> wishlist fixes. Score is a hypothesis for prioritisation, not proof.` : "";
 }
@@ -302,7 +303,7 @@ function drill(i){
   const items = cs.map(e => {
     const q = (e.source_quotes||[])[0] || {};
     const tags = badge("b-"+(e.hypothesis_map||"other").toLowerCase(), e.hypothesis_map||"other")
-      + " " + badge("s-"+e.stance, e.stance) + ` <span class="badge b-other">${esc(e.theme)}</span>`;
+      + " " + badge("s-"+e.stance, e.stance) + ` <span class="badge b-other">${esc(themeLabel(e.theme))}</span>`;
     const verb = q.verbatim ? `<details><summary class="small muted">source quote (audit trail)</summary>`
       + `<div class="q">“${esc(q.verbatim)}” <span class="src">[${esc(q.platform)}]${q.date?" · "+esc(q.date):""}</span></div></details>` : "";
     return `<div class="claim"><div>${esc(e.claim_text)}</div>
@@ -322,14 +323,15 @@ function renderMethod(d){
   const hyp={}; for(const e of REGISTER){ const h=e.hypothesis_map||"other"; hyp[h]=(hyp[h]||0)+1; }
   const themes={}; for(const e of REGISTER){ themes[e.theme||"misc"]=(themes[e.theme||"misc"]||0)+1; }
   const nThemes=Object.keys(themes).length;
-  const topThemes=Object.entries(themes).sort((a,b)=>b[1]-a[1]).slice(0,3).map(([k,v])=>`${k.replace(/_/g," ")} ${v}`).join(" · ");
+  const topThemes=Object.entries(themes).sort((a,b)=>b[1]-a[1]).slice(0,3).map(([k,v])=>`${themeLabel(k)} ${v}`).join(" · ");
   const cp=m.counts_by_platform||{};
-  const nice=k=>({google_play:"Play Store",youtube:"YouTube",reddit:"Reddit"}[k]||k);
+  const nice=k=>({google_play:"Play Store",youtube:"YouTube",reddit:"Reddit",
+    apple_app_store:"App Store",x_twitter:"X/Twitter",quora:"Quora"}[k]||k.replace(/_/g," "));
   const plats=Object.entries(cp).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`${nice(k)} ${v.toLocaleString()}`).join(" · ");
   const dist=a.distribution||{}, heldUp=dist["held up"]||0;
   const substantive=(dist["held up"]||0)+(dist["partly invented"]||0)+(dist["rejected"]||0);
   const agree = substantive ? Math.round(heldUp/substantive*100) : 0;
-  const notIng=(m.not_ingested||[]).length ? " Wired-not-ingested: "+m.not_ingested.join(", ")+"." : "";
+  const notIng=(m.not_ingested||[]).length ? " Wired-not-ingested: "+m.not_ingested.map(nice).join(", ")+"." : "";
 
   const stages=[
     ["Ingest",`Public reviews & discussions across platforms.${notIng}`,`${docs.toLocaleString()} docs · ${plats}`],
@@ -369,12 +371,12 @@ function renderAudit(d) {
   const themes = [...new Set(REGISTER.map(e=>e.theme))].sort();
   const verds = ["held up","partly invented","rejected","not tested","pending"];
   $("filters").innerHTML =
-    sel("fHyp","Hypothesis",["H1","H2","H3","other"]) + sel("fVerd","Verdict",verds) + sel("fTheme","Theme",themes);
+    sel("fHyp","Hypothesis",["H1","H2","H3","other"]) + sel("fVerd","Verdict",verds) + sel("fTheme","Theme",themes,themeLabel);
   ["fHyp","fVerd","fTheme"].forEach(id => $(id).onchange = renderAuditRows);
   renderAuditRows();
 }
-function sel(id,label,opts){ return `<select id="${id}"><option value="">${label}: all</option>`
-  + opts.map(o=>`<option value="${esc(o)}">${esc(o)}</option>`).join("")+`</select>`; }
+function sel(id,label,opts,disp){ return `<select id="${id}"><option value="">${label}: all</option>`
+  + opts.map(o=>`<option value="${esc(o)}">${esc(disp?disp(o):o)}</option>`).join("")+`</select>`; }
 
 function renderAuditRows() {
   const fh=$("fHyp").value, fv=$("fVerd").value, ft=$("fTheme").value;
@@ -399,7 +401,7 @@ function renderAuditRows() {
       <td>${esc(e.claim_text)}</td>
       <td>${badge("b-"+e.hypothesis_map.toLowerCase(), e.hypothesis_map)}</td>
       <td>${badge("s-"+e.stance, e.stance)}</td>
-      <td class="small muted">${esc(e.theme)}</td>
+      <td class="small muted">${esc(themeLabel(e.theme))}</td>
       <td>${e.n_independent_srcs}${e.thin_evidence?` <span class="badge s-contradicts" title="single platform">thin</span>`:""}</td>
       <td>${e.corpus_frequency||1}</td>
       <td class="small muted">${esc(e.engine_confidence)}</td>
