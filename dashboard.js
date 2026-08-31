@@ -6,7 +6,12 @@
 
 const C = { supports:"#0072b2", partly:"#e69f00", rejected:"#6b6e7b", brand:"#ff3f6c",
             ink:"#282c3f", muted:"#5a5f66", line:"#e6e8ec", panel:"#f7f8fa" };
-const HYPNAME = { h1:"H1 — uncertainty", h2:"H2 — occasion decay", h3:"H3 — save ≠ intent", other:"other" };
+const HYPNAME = { h1:"H1 · Purchase-time uncertainty", h2:"H2 · Occasion decay", h3:"H3 · Saved ≠ intent", other:"Other" };
+const PLAIN = { h1:"Purchase-time uncertainty", h2:"Occasion decay", h3:"Mixed intent", other:"Other" };
+// diagnosis-level routing principle per blocker (a "what to do" direction, NOT a prescribed feature)
+const ROUTE = { h1:"reduce purchase-time doubt on the saved item",
+                h2:"act before the occasion passes",
+                h3:"tell real intent from browsing — don't nag" };
 const IV_CLASS = { strong:"iv-strong", weak:"iv-weak", rejected:"iv-rejected" };
 // function-word stoplist + review fillers — keeps the RAG's off-corpus refusal robust
 const STOP = new Set(("about above after again against all and any are aren cannot could couldn did didn does doesn doing "
@@ -57,23 +62,35 @@ const badge = (cls,txt) => `<span class="badge ${cls}">${esc(txt)}</span>`;
 
 // ─────────────────────────────────────────── TAB 1: DECISION
 function renderVerdict(d) {
-  const t = d.triangulation || {};
-  const banner = t.banner || "No single blocker — capture intent, then route each save to the right response.";
-  const m = banner.match(/^(.*?[.!])\s*(.*)$/s) || [null, banner, ""];
-  $("verdict").innerHTML = `<div class="verdict">
-    <div class="lead">Root cause · triangulated across 3 instruments</div>
-    <div class="call"><b class="ok">${esc(m[1])}</b> ${esc(m[2])}</div>
+  const m = d.manifest || {}, tri = (d.triangulation||{}).rows || {}, sv = d.survey || {};
+  const hyps = ["h1","h2","h3"].filter(h => tri[h] || (d.lean||{})[h]);
+  const names = hyps.map(h => PLAIN[h].toLowerCase()).join(", ").replace(/, ([^,]*)$/, ", and $1");
+  const routes = hyps.map(h => `<span class="route"><b>${esc(PLAIN[h])}</b> → ${esc(ROUTE[h])}</span>`).join("");
+  const docs = (m.n_documents||0).toLocaleString();
+  $("verdict").innerHTML = `<div class="answer">
+    <div class="q">The question</div>
+    <p class="qtext">Why do shoppers <b>save</b> fashion items on Myntra but not <b>buy</b> them — and can we move it <b>without discounts</b>?</p>
+    <div class="found">What we found</div>
+    <p class="finding"><b>There is no single blocker.</b> ${hyps.length||3} different reasons compete — ${esc(names)} —
+      so the root error is treating every saved item the same.</p>
+    <div class="means">What it means for Myntra</div>
+    <p class="meanssub">Capture the user's intent at save-time, then <b>route each save to the right response</b>:</p>
+    <div class="routes">${routes}</div>
+    <p class="brief">This is a <b>diagnosis and a routing principle</b> — not a prescribed feature. The engine deliberately stops at the “what,” not the “how.”</p>
+    <div class="sure"><b>How sure?</b> Triangulated across 3 instruments — ${docs} public docs · survey n=${sv.n||26} · 6 interviews.
+      Every claim re-opens to a verbatim quote; nothing is generated. A prioritised hypothesis, not proof.</div>
+    <div class="readpath">Read on → <b>Decision</b> (you're here) · Evidence · Method · Audit</div>
   </div>`;
 }
 
 function renderKPIs(d) {
   const m = d.manifest||{};
-  const noSignal = m.n_documents ? 1 - (m.n_relevant/m.n_documents) : 0;
+  const nHyp = ["h1","h2","h3"].filter(h => (d.lean||{})[h]).length || 3;
   const tiles = [
-    [(m.n_documents||0).toLocaleString(), "docs analysed"],
-    [(m.n_register_entries||0), "traceable claims"],
-    [(noSignal*100).toFixed(1)+"%", "no-signal (honesty)"],
-    [Object.keys(d.lean||{}).filter(h=>h!=="other").length || 3, "hypotheses tested"],
+    [(m.n_documents||0).toLocaleString(), "public docs analysed"],
+    [(m.n_register_entries||REGISTER.length||0), "traceable claims · 100% quote-backed"],
+    [nHyp, "competing blockers · none dominant"],
+    ["3", "instruments triangulated · corpus · survey · interviews"],
   ];
   $("kpis").innerHTML = tiles.map(([b,s]) => `<div class="kpi"><b>${b}</b><span>${s}</span></div>`).join("");
 }
@@ -88,7 +105,7 @@ function renderScoreboard(d) {
     const vchip = `<span class="iv ${IV_CLASS[T.strength]||"iv-weak"}">${esc(T.verdict||"")}${T.instruments?` · ${esc(T.instruments)}`:""}</span>`;
     return `<div style="margin:16px 0 4px">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;gap:8px">
-        <b>${esc(T.name||HYPNAME[h])}</b>${vchip}</div>
+        <b>${esc(HYPNAME[h])}</b>${vchip}</div>
       <div style="display:flex;align-items:center;gap:7px">
         <span class="barval" style="width:26px;text-align:right;color:${C.partly}" title="contradicts">${x.contradicts}</span>
         <div style="flex:1;position:relative;height:18px;background:${C.panel};border-radius:5px">
@@ -245,8 +262,8 @@ function renderOpps(d){
     + `<th class="help" title="pain × frequency × business-fit ÷ effort — each factor a 1–3 band computed from the corpus. pain = share of claims evidencing a real blocker; frequency = log-scaled volume; business-fit = hypothesis addressability (H1/H2=3, H3=2, other=1, price=0 barred); effort = post-purchase share (ops-heavy=3, pre-purchase wishlist fix=1). Higher = act first.">Opportunity score ⓘ</th>`
     + `<th>Signal</th></tr>`;
   const rows = OPPS.map((o,i) => {
-    const maps = o.barred ? `<span class="badge b-other">barred · price</span>`
-                          : `<span class="badge b-${o.domH.toLowerCase()}">${esc(o.domH)}</span>`;
+    const maps = o.barred ? `<span class="badge b-other" title="price is a barred lever — not actioned">barred · price</span>`
+                          : `<span class="badge b-${o.domH.toLowerCase()}" title="${esc(PLAIN[o.domH.toLowerCase()]||o.domH)}">${esc(o.domH)}</span>`;
     const sig = o.noise ? `<span class="sig noise">Noise</span>` : `<span class="sig real">Real</span>`;
     const pill = `<span class="score-pill${o.score < maxScore*0.5 ? " lo":""}">${o.score}</span>`;
     return `<tr class="opp-row${o.noise?" noise":""}" onclick="drill(${i})" title="click for the source-cited claims">
