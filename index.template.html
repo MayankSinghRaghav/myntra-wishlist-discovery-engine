@@ -44,7 +44,7 @@
   .answer .meanssub{font-size:14px;color:var(--ink);margin:3px 0 9px}
   .answer .routes{display:flex;flex-wrap:wrap;gap:8px}
   .answer .route{font-size:12.5px;background:var(--panel);border:1px solid var(--line);border-radius:20px;padding:6px 13px;color:var(--ink)}
-  .answer .route b{color:var(--brand)}
+  .answer .route b{color:var(--brand)} .answer .route i{color:var(--muted);font-style:normal;font-size:11px}
   .answer .brief{font-size:12.5px;color:var(--muted);font-style:italic;margin:11px 0 0}
   .answer .sure{font-size:12.5px;color:var(--ink);background:var(--panel);border-radius:8px;padding:9px 12px;margin:12px 0 0}
   .answer .readpath{font-size:12px;color:var(--muted);margin-top:11px;border-top:1px solid var(--line);padding-top:9px}
@@ -77,6 +77,8 @@
   .filters{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0 12px}
   .filters select{padding:7px 10px;border:1px solid var(--line);border-radius:8px;font-size:13px;background:#fff}
   .tablewrap{overflow-x:auto}
+  .swipehint{display:none}
+  @media(max-width:700px){.swipehint{display:block;font-size:11px;color:var(--muted);margin:0 0 6px;font-style:italic}}
   table{border-collapse:collapse;width:100%;font-size:13px} th,td{border:1px solid var(--line);padding:7px 9px;text-align:left;vertical-align:top}
   th{background:var(--panel);position:sticky;top:0;cursor:pointer;white-space:nowrap} th:hover{color:var(--brand)}
   .badge{font-size:11px;font-weight:700;padding:2px 7px;border-radius:5px;color:#fff;white-space:nowrap}
@@ -152,6 +154,7 @@
   <section id="tab-evidence" class="tabpane">
     <div class="card">
       <h3>Opportunity ranking <span class="cap">— every theme quantified, scored & traceable · click a row for its source-cited claims</span></h3>
+      <p class="swipehint">↔ swipe to see score &amp; signal</p>
       <div class="tablewrap"><table class="opps" id="opps"></table></div>
       <p class="discard" id="oppDiscard"></p>
       <p class="take" id="oppTake"></p>
@@ -177,6 +180,7 @@
     <div class="card">
       <p id="auditCoverage" class="small"></p>
       <div class="filters" id="filters"></div>
+      <p class="swipehint">↔ swipe to see quotes &amp; interview verdict</p>
       <div class="tablewrap"><table id="register"></table></div>
     </div>
   </section>

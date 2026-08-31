@@ -65,7 +65,11 @@ function renderVerdict(d) {
   const m = d.manifest || {}, tri = (d.triangulation||{}).rows || {}, sv = d.survey || {};
   const hyps = ["h1","h2","h3"].filter(h => tri[h] || (d.lean||{})[h]);
   const names = hyps.map(h => PLAIN[h].toLowerCase()).join(", ").replace(/, ([^,]*)$/, ", and $1");
-  const routes = hyps.map(h => `<span class="route"><b>${esc(PLAIN[h])}</b> → ${esc(ROUTE[h])}</span>`).join("");
+  const lean = d.lean||{};
+  const routes = hyps.map(h => {
+    const n = (lean[h]||{}).net;
+    return `<span class="route"><b>${esc(PLAIN[h])}</b>${n!=null?` <i>(${n>=0?"+":""}${n} claims)</i>`:""} → ${esc(ROUTE[h])}</span>`;
+  }).join("");
   const docs = (m.n_documents||0).toLocaleString();
   $("verdict").innerHTML = `<div class="answer">
     <div class="q">The question</div>
@@ -343,7 +347,7 @@ function renderMethod(d){
   const noSignal = docs ? (1-rel/docs)*100 : 0;
   const chips=[
     [`${noSignal.toFixed(1)}%`, `no-signal — off-topic noise correctly discarded (${dropped.toLocaleString()}/${docs.toLocaleString()})`],
-    [`${heldUp}/${substantive}`, `AI↔human agreement — claims that held up vs the ${a.n_interviews||6} interviews on the hand-audited sample (${agree}%)`],
+    [`${heldUp}/${substantive}`, `engine claims stress-tested against ${a.n_interviews||6} interviews — ${heldUp} fully held up, ${substantive-heldUp} flagged over-stated. Low by design: the corpus over-claims, the audit catches it (that's why we route, not chase the loudest signal).`],
     [`${noQuote}`, `claims dropped for no traceable verbatim quote (anti-hallucination)`],
   ];
   $("honesty").innerHTML = chips.map(([b,s])=>`<div class="chip"><b>${b}</b><span>${esc(s)}</span></div>`).join("");
