@@ -49,6 +49,8 @@
   .answer .sure{font-size:12.5px;color:var(--ink);background:var(--panel);border-radius:8px;padding:9px 12px;margin:12px 0 0}
   .answer .readpath{font-size:12px;color:var(--muted);margin-top:11px;border-top:1px solid var(--line);padding-top:9px}
   .answer .readpath b{color:var(--ink)}
+  .answer .readpath a{color:var(--brand);font-weight:700;cursor:pointer;text-decoration:none}
+  .answer .readpath a:hover{text-decoration:underline}
   /* kpis */
   .kpis{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:14px}
   @media(min-width:780px){.kpis{grid-template-columns:repeat(4,1fr)}}
@@ -231,6 +233,8 @@ const STOP = new Set(("about above after again against all and any are aren cann
 
 const esc = s => String(s==null?"":s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const themeLabel = t => String(t||"misc").replace(/_/g," ");   // snake_case theme keys are internal, never user-facing
+const platLabel = k => ({google_play:"Play Store",youtube:"YouTube",reddit:"Reddit",
+  apple_app_store:"App Store",x_twitter:"X/Twitter",quora:"Quora"}[k] || String(k||"").replace(/_/g," "));
 const pct = (n,d) => d ? Math.round(n/d*100)+"%" : "0%";
 const pct1 = (n,d) => d ? (n/d*100).toFixed(1)+"%" : "0%";
 const $ = id => document.getElementById(id);
@@ -250,6 +254,8 @@ function setupTabs() {
     document.querySelectorAll(".tabpane").forEach(p => p.classList.toggle("on", p.id==="tab-"+t.dataset.tab));
   });
 }
+function goTab(name){ document.querySelector(`.tab[data-tab="${name}"]`)?.click(); window.scrollTo(0,0); }
+window.goTab = goTab;
 
 function buildDF(d) {
   DF = Object.create(null);
@@ -291,7 +297,8 @@ function renderVerdict(d) {
     <p class="brief">This is a <b>diagnosis and a routing principle</b> — not a prescribed feature. The engine deliberately stops at the “what,” not the “how.”</p>
     <div class="sure"><b>How sure?</b> Triangulated across 3 instruments — ${docs} public docs · survey n=${sv.n||26} · 6 interviews.
       Every claim re-opens to a verbatim quote; nothing is generated. A prioritised hypothesis, not proof.</div>
-    <div class="readpath">Read on → <b>Decision</b> (you're here) · Evidence · Method · Audit</div>
+    <div class="readpath">Read on → <b>Decision</b> (you're here) ·
+      <a onclick="goTab('evidence')">Evidence</a> · <a onclick="goTab('method')">Method</a> · <a onclick="goTab('audit')">Audit</a></div>
   </div>`;
 }
 
@@ -347,7 +354,7 @@ function renderScoreboard(d) {
 function renderReconcile(d) {
   const lean=d.lean||{}, iv=(d.interview||{}).h1||{}, sp=d.h1_split||{};
   const contra = (REGISTER).find(e => e.hypothesis_map==="H1" && e.stance==="contradicts" && (e.source_quotes||[]).length);
-  const cq = contra ? `“${esc(contra.source_quotes[0].verbatim)}” <span class="src">[${esc(contra.source_quotes[0].platform)}]</span>` : "";
+  const cq = contra ? `“${esc(contra.source_quotes[0].verbatim)}” <span class="src">[${esc(platLabel(contra.source_quotes[0].platform))}]</span>` : "";
   const unclear = sp.unclear!=null ? sp.unclear : (sp.ambiguous||0);
   $("reconcile").innerHTML = `<div class="reconcile">
     <div class="rec-tag">Why H1 is a top blocker — and why it's contested</div>
@@ -417,7 +424,7 @@ function renderThemes(d) {
 
 function renderPlatforms(d) {
   const cp = (d.manifest||{}).counts_by_platform||{};
-  const rows = Object.entries(cp).sort((a,b)=>b[1]-a[1]);
+  const rows = Object.entries(cp).sort((a,b)=>b[1]-a[1]).map(([k,v])=>[platLabel(k),v]);
   if (!rows.length) { $("platforms").innerHTML = empty("platforms"); return; }
   const single = REGISTER.filter(e => (e.n_independent_srcs||1) < 2).length;
   $("platforms").innerHTML = hbars(rows, C.supports)
@@ -512,9 +519,9 @@ function drill(i){
     const tags = badge("b-"+(e.hypothesis_map||"other").toLowerCase(), e.hypothesis_map||"other")
       + " " + badge("s-"+e.stance, e.stance) + ` <span class="badge b-other">${esc(themeLabel(e.theme))}</span>`;
     const verb = q.verbatim ? `<details><summary class="small muted">source quote (audit trail)</summary>`
-      + `<div class="q">“${esc(q.verbatim)}” <span class="src">[${esc(q.platform)}]${q.date?" · "+esc(q.date):""}</span></div></details>` : "";
+      + `<div class="q">“${esc(q.verbatim)}” <span class="src">[${esc(platLabel(q.platform))}]${q.date?" · "+esc(q.date):""}</span></div></details>` : "";
     return `<div class="claim"><div>${esc(e.claim_text)}</div>
-      <div class="tags">${tags} <span class="src">[${esc(q.platform||"—")}]</span></div>${verb}</div>`;
+      <div class="tags">${tags} <span class="src">[${q.platform?esc(platLabel(q.platform)):"—"}]</span></div>${verb}</div>`;
   }).join("");
   row.querySelector("td").innerHTML =
     `<div class="small muted" style="margin-bottom:2px">Paraphrased atomic claims (scraped text is paraphrased, not quoted) — `
@@ -532,13 +539,11 @@ function renderMethod(d){
   const nThemes=Object.keys(themes).length;
   const topThemes=Object.entries(themes).sort((a,b)=>b[1]-a[1]).slice(0,3).map(([k,v])=>`${themeLabel(k)} ${v}`).join(" · ");
   const cp=m.counts_by_platform||{};
-  const nice=k=>({google_play:"Play Store",youtube:"YouTube",reddit:"Reddit",
-    apple_app_store:"App Store",x_twitter:"X/Twitter",quora:"Quora"}[k]||k.replace(/_/g," "));
-  const plats=Object.entries(cp).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`${nice(k)} ${v.toLocaleString()}`).join(" · ");
+  const plats=Object.entries(cp).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`${platLabel(k)} ${v.toLocaleString()}`).join(" · ");
   const dist=a.distribution||{}, heldUp=dist["held up"]||0;
   const substantive=(dist["held up"]||0)+(dist["partly invented"]||0)+(dist["rejected"]||0);
   const agree = substantive ? Math.round(heldUp/substantive*100) : 0;
-  const notIng=(m.not_ingested||[]).length ? " Wired-not-ingested: "+m.not_ingested.map(nice).join(", ")+"." : "";
+  const notIng=(m.not_ingested||[]).length ? " Wired-not-ingested: "+m.not_ingested.map(platLabel).join(", ")+"." : "";
 
   const stages=[
     ["Ingest",`Public reviews & discussions across platforms.${notIng}`,`${docs.toLocaleString()} docs · ${plats}`],
@@ -602,7 +607,7 @@ function renderAuditRows() {
     <th onclick="sortAudit('rank')">#</th><th>Claim</th><th>H</th><th>Stance</th><th>Theme</th>
     <th onclick="sortAudit('src')">Src</th><th onclick="sortAudit('freq')">n</th><th>Conf</th><th>Quotes</th><th>Interview verdict</th></tr>`;
   const body = rows.map(e => {
-    const qs = (e.source_quotes||[]).map(q=>`<div class="q">“${esc(q.verbatim)}” <span class="src">[${esc(q.platform)}]${q.date?" · "+esc(q.date):""}</span></div>`).join("");
+    const qs = (e.source_quotes||[]).map(q=>`<div class="q">“${esc(q.verbatim)}” <span class="src">[${esc(platLabel(q.platform))}]${q.date?" · "+esc(q.date):""}</span></div>`).join("");
     return `<tr>
       <td class="muted">${esc(e.claim_id)}</td>
       <td>${esc(e.claim_text)}</td>
@@ -634,8 +639,8 @@ function ask() {
   if (plats.size < 2) { out.innerHTML = `<div class="refuse"><b>Refused — cross-source rule.</b> Matching evidence is from only ${plats.size} platform(s); a claim needs ≥2.</div>`; return; }
   const seen = new Set();
   const top = scored.filter(x=>!seen.has(x.doc.quote)&&seen.add(x.doc.quote)).slice(0,5).map(x =>
-    `<div class="q">${badge("b-"+x.doc.hypothesis.toLowerCase(),x.doc.hypothesis)} ${badge("s-"+x.doc.stance,x.doc.stance)} “${esc(x.doc.quote)}” <span class="src">[${esc(x.doc.platform)}]</span></div>`).join("");
-  out.innerHTML = `<div class="answer"><b>Grounded evidence</b> from ${plats.size} platforms (${[...plats].join(", ")}) — verbatim only, no generation:${top}</div>`;
+    `<div class="q">${badge("b-"+x.doc.hypothesis.toLowerCase(),x.doc.hypothesis)} ${badge("s-"+x.doc.stance,x.doc.stance)} “${esc(x.doc.quote)}” <span class="src">[${esc(platLabel(x.doc.platform))}]</span></div>`).join("");
+  out.innerHTML = `<div class="answer"><b>Grounded evidence</b> from ${plats.size} platforms (${[...plats].map(platLabel).join(", ")}) — verbatim only, no generation:${top}</div>`;
 }
 window.ask = ask; window.sortAudit = sortAudit; window.drill = drill;
 
